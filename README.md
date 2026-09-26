@@ -46,7 +46,7 @@ python -m venv .venv
 After activation, your terminal should look like this:
 
 ```
-(.venv) PS C:\Users\username\better-ai>
+(.venv) PS C:\Users\username\deep-agents>
 ```
 
 ---
