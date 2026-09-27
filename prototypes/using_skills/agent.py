@@ -140,16 +140,17 @@ def message_text(message) -> str:
 
 # ------------------------------------------------------------------- banner
 LOGO = [
-    "██████  ███████ ███████ ██████ ",
-    "██   ██ ██      ██      ██   ██",
-    "██   ██ █████   █████   ██████ ",
-    "██   ██ ██      ██      ██     ",
-    "██████  ███████ ███████ ██     ",
-    " █████   ██████ ███████ ██   ██ ███████",
-    "██   ██ ██      ██      ███  ██    ██  ",
-    "███████ ██  ███ █████   ██ █ ██    ██  ",
-    "██   ██ ██   ██ ██      ██  ███    ██  ",
-    "██   ██  ██████ ███████ ██   ██    ██  ",
+    "    █████  ██████ ██████ ██████    ",
+    "    ██  ██ ██     ██     ██  ██    ",
+    "    ██  ██ █████  █████  █████     ",
+    "    ██  ██ ██     ██     ██        ",
+    "    █████  ██████ ██████ ██        ",
+    "",
+    " ████   █████ ██████ ██   ██ ██████",
+    "██  ██ ██     ██     ███  ██   ██  ",
+    "██████ ██ ███ █████  ██ █ ██   ██  ",
+    "██  ██ ██  ██ ██     ██  ███   ██  ",
+    "██  ██  █████ ██████ ██   ██   ██  ",
 ]
 SUBTITLE = "LangChain Deep Agents · skills playground"
 
@@ -165,7 +166,7 @@ MODE_STYLES = {"deny": "green", "interrupt": "yellow", "writable": "red"}
 
 def print_banner(model: str, mode: str) -> None:
     use_utf8()
-    art = max(len(line) for line in LOGO)
+    art = max(len(line) for line in LOGO) + 4  # breathing room so AGENT isn't flush to the edges
     width = max(art, len(SUBTITLE)) + 6  # 3 columns of padding on each side
 
     def row(text, *styles):
