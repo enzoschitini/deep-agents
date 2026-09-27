@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
+import re
 import sys
 from pathlib import Path
 
@@ -97,6 +99,45 @@ def build_agent(model="anthropic:claude-sonnet-4-6", analyst_model=None, permiss
     )
 
 
+# ------------------------------------------------------------------- colors
+STYLES = {
+    "reset": "\033[0m", "bold": "\033[1m", "dim": "\033[2m",
+    "orange": "\033[38;5;209m", "cyan": "\033[38;5;117m", "green": "\033[38;5;114m",
+    "yellow": "\033[38;5;215m", "magenta": "\033[38;5;176m", "red": "\033[38;5;203m",
+    "grey": "\033[38;5;245m", "blue": "\033[38;5;110m",
+}
+# FORCE_COLOR keeps the palette when output is piped (demos, screen recordings).
+COLOR = (sys.stdout.isatty() or os.environ.get("FORCE_COLOR")) and not os.environ.get("NO_COLOR")
+
+# One hue per kind of action, so a long transcript is skimmable.
+TOOL_STYLES = {
+    "read_file": "cyan", "ls": "cyan", "glob": "cyan", "grep": "cyan",
+    "write_file": "yellow", "edit_file": "yellow",
+    "task": "magenta",
+    "calculate": "green",
+}
+SKILL_MARKER = re.compile(r"\[skill:([a-z0-9-]+)\]")
+
+
+def paint(text: str, *styles: str) -> str:
+    if not COLOR:
+        return text
+    return "".join(STYLES[s] for s in styles) + text + STYLES["reset"]
+
+
+def message_text(message) -> str:
+    """Flatten a message's content to text.
+
+    Models that return thinking blocks give `content` as a list of blocks, which prints
+    as a raw Python repr if handed straight to print().
+    """
+    content = message.content
+    if isinstance(content, str):
+        return content
+    blocks = [b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"]
+    return "\n".join(b for b in blocks if b).strip()
+
+
 # ------------------------------------------------------------------- banner
 LOGO = [
     "██████  ███████ ███████ ██████ ",
@@ -119,27 +160,37 @@ def use_utf8() -> None:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
+MODE_STYLES = {"deny": "green", "interrupt": "yellow", "writable": "red"}
+
+
 def print_banner(model: str, mode: str) -> None:
     use_utf8()
-    color, dim, off = ("\033[38;5;209m", "\033[2m", "\033[0m") if sys.stdout.isatty() else ("", "", "")
     art = max(len(line) for line in LOGO)
     width = max(art, len(SUBTITLE)) + 6  # 3 columns of padding on each side
 
-    def row(text, style=""):
-        body = text.center(width)
-        print(f"{dim}│{off}{style}{body}{off}{dim}│{off}")
+    def row(text, *styles):
+        print(paint("│", "dim") + paint(text.center(width), *styles) + paint("│", "dim"))
 
     print()
-    print(f"{dim}╭{'─' * width}╮{off}")
+    print(paint(f"╭{'─' * width}╮", "dim"))
     row("")
     for line in LOGO:
-        row(line.center(art), color)
+        row(line.center(art), "orange")
     row("")
-    row(SUBTITLE, dim)
+    row(SUBTITLE, "dim")
     row("")
-    print(f"{dim}╰{'─' * width}╯{off}")
-    print(f"\n  model {model}   ·   /skills/** {mode}")
-    print(f"  {dim}tool calls show up as →. /help for commands, /exit to quit.{off}\n")
+    print(paint(f"╰{'─' * width}╯", "dim"))
+    print(
+        f"\n  {paint('model', 'dim')} {paint(model, 'bold')}"
+        f"   {paint('·', 'dim')}   {paint('/skills/**', 'dim')} "
+        f"{paint(mode, MODE_STYLES[mode], 'bold')}"
+    )
+    legend = "  ".join(
+        paint(f"● {kind}", style)
+        for kind, style in (("read", "cyan"), ("write", "yellow"), ("delegate", "magenta"), ("compute", "green"))
+    )
+    print(f"  {legend}")
+    print(paint("  /help for commands, /exit to quit.", "dim") + "\n")
 
 
 # --------------------------------------------------------------------- chat
@@ -153,6 +204,20 @@ def _fmt_args(name: str, args: dict) -> str:
     return str(args)[:70]
 
 
+def _fmt_call(name: str, args: dict) -> str:
+    """Render one tool call, flagging the moment a skill actually gets activated."""
+    line = f"{paint(name, TOOL_STYLES.get(name, 'blue'), 'bold')}{paint('(' + _fmt_args(name, args) + ')', 'dim')}"
+    path = str(args.get("file_path", ""))
+    if name == "read_file" and path.endswith("SKILL.md"):
+        line += "  " + paint(f"◆ activating {path.rsplit('/', 2)[-2]}", "green", "bold")
+    return line
+
+
+def _is_error(text: str) -> bool:
+    head = text[:80].lower()
+    return head.startswith("error") or "permission denied" in head or "rejected the tool call" in head
+
+
 def _echo(messages, already_seen: set) -> None:
     """Print tool calls and their results as they come off the stream."""
     for m in messages:
@@ -161,16 +226,21 @@ def _echo(messages, already_seen: set) -> None:
                 if tc["id"] in already_seen:  # reappears when resuming from a pause
                     continue
                 already_seen.add(tc["id"])
-                print(f"  → {tc['name']}({_fmt_args(tc['name'], tc['args'])})")
+                print(f"  {paint('→', 'grey')} {_fmt_call(tc['name'], tc['args'])}")
         elif isinstance(m, ToolMessage):
-            print(f"    ← {' '.join(str(m.content).split())[:80]}")
+            body = " ".join(str(m.content).split())
+            if _is_error(body):  # errors stay long enough to be actionable
+                print(f"    {paint('✗', 'red')} {paint(body[:200], 'red')}")
+            else:
+                print(f"    {paint('←', 'grey')} {paint(body[:90], 'grey')}")
 
 
 def _ask_decision(interrupt) -> Command:
     """Ask the human what to do about the paused action."""
     request = interrupt.value["action_requests"][0]
-    print(f"\n  [PAUSED] the agent wants to run {request['name']}({_fmt_args(request['name'], request['args'])})")
-    if input("  approve? [y/N] ").strip().lower().startswith("y"):
+    print(f"\n  {paint(' PAUSED ', 'yellow', 'bold')} the agent wants to run")
+    print(f"  {_fmt_call(request['name'], request['args'])}")
+    if input(paint("  approve? [y/N] ", "yellow")).strip().lower().startswith("y"):
         return Command(resume={"decisions": [{"type": "approve"}]})
     return Command(resume={"decisions": [{"type": "reject", "message": "Human rejected the write."}]})
 
@@ -190,7 +260,9 @@ def turn(agent, payload, config) -> None:
             break
         payload = _ask_decision(interrupt)
 
-    print(f"\n{agent.get_state(config).values['messages'][-1].content}\n")
+    answer = message_text(agent.get_state(config).values["messages"][-1])
+    answer = SKILL_MARKER.sub(lambda m: paint(m.group(0), "green", "bold"), answer)
+    print(f"\n{paint('agent', 'orange', 'bold')}\n{answer}\n")
 
 
 HELP = """
@@ -208,9 +280,12 @@ def chat(model: str, mode: str) -> None:
     config = {"configurable": {"thread_id": "chat"}}
     print_banner(model, mode)
 
+    def notice(text, *styles):
+        print(f"  {paint(text, *(styles or ('cyan',)))}\n")
+
     while True:
         try:
-            line = input("you> ").strip()
+            line = input(paint("you> ", "orange", "bold")).strip()
         except (EOFError, KeyboardInterrupt):
             print()
             return
@@ -225,24 +300,25 @@ def chat(model: str, mode: str) -> None:
                 print(HELP)
             elif cmd == "/reset":
                 agent.update_state(config, {"skills_metadata": None})
-                print("  skills will be reloaded on the next question.\n")
+                notice("skills will be reloaded on the next question.")
             elif cmd == "/skills":
                 metadata = agent.get_state(config).values.get("skills_metadata")
                 if not metadata:
-                    print("  no skills loaded yet (ask something first).\n")
+                    notice("no skills loaded yet (ask something first).", "dim")
                 else:
                     for s in metadata:
-                        print(f"  - {s['name']}: {s['description'][:70]}")
+                        print(f"  {paint('◆', 'green')} {paint(s['name'], 'bold')}"
+                              f" {paint(s['description'][:70], 'dim')}")
                     print()
             elif cmd == "/mode":
                 if arg.strip() not in PERMISSION_MODES:
-                    print(f"  modes: {', '.join(PERMISSION_MODES)}\n")
+                    notice(f"modes: {', '.join(PERMISSION_MODES)}", "dim")
                 else:
                     mode = arg.strip()
                     agent = build_agent(model=model, permission_mode=mode)
-                    print(f"  /skills/** is now {mode} (conversation restarted).\n")
+                    notice(f"/skills/** is now {mode} (conversation restarted).", MODE_STYLES[mode])
             else:
-                print("  unknown command — /help lists the available ones.\n")
+                notice("unknown command — /help lists the available ones.", "red")
             continue
 
         turn(agent, {"messages": [{"role": "user", "content": line}]}, config)
@@ -272,7 +348,7 @@ def main() -> None:
         {"messages": [{"role": "user", "content": " ".join(args.question) or DEFAULT_PROMPT}]},
         config={"configurable": {"thread_id": "one-shot"}},
     )
-    print(result["messages"][-1].content)
+    print(message_text(result["messages"][-1]))
 
 
 if __name__ == "__main__":
