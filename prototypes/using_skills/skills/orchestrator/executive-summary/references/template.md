@@ -1,8 +1,8 @@
-# Template de resumo executivo
+# Executive summary template
 
-**Contexto:** 1 frase.
+**Context:** 1 sentence.
 
-**Pontos-chave:**
+**Key points:**
 - ...
 
-**Próximo passo recomendado:** 1 frase.
+**Recommended next step:** 1 sentence.

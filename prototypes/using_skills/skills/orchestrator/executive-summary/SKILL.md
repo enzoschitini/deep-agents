@@ -1,17 +1,18 @@
 ---
-name: resumo-executivo
+name: executive-summary
 description: >-
-  Produz resumos executivos curtos de textos, reuniões ou relatórios. Use quando
-  o usuário pedir "resuma", "resumo executivo", "TL;DR" ou uma síntese para gestores.
+  Produces short executive summaries of texts, meetings or reports. Use when the
+  user asks to "summarize", for an "executive summary", a "TL;DR" or a synthesis
+  for managers.
 metadata:
   version: "1.0"
 ---
 
-# resumo-executivo
+# executive-summary
 
-## Instruções
+## Instructions
 
-1. Leia o conteúdo que o usuário forneceu.
-2. Abra o template em `references/template.md` e siga exatamente a estrutura dele.
-3. No máximo 5 bullets em "Pontos-chave"; cada bullet com até 20 palavras.
-4. Termine SEMPRE com a linha `[skill:resumo-executivo]` (marcador usado na validação).
+1. Read the content the user provided.
+2. Open the template at `references/template.md` and follow its structure exactly.
+3. At most 5 bullets under "Key points"; each bullet up to 20 words.
+4. ALWAYS end with the line `[skill:executive-summary]` (marker used by the validation suite).

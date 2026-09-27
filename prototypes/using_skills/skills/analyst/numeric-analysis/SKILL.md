@@ -1,16 +1,16 @@
 ---
-name: analise-numerica
+name: numeric-analysis
 description: >-
-  Faz contas, orçamentos e estatísticas simples de forma determinística usando a
-  ferramenta `calcular`. Use para qualquer pedido com números, somas, médias ou custos.
+  Runs arithmetic, budgets and simple statistics deterministically through the
+  `calculate` tool. Use for any request involving numbers, sums, averages or costs.
 ---
 
-# analise-numerica
+# numeric-analysis
 
-## Instruções
+## Instructions
 
-1. Nunca calcule de cabeça: use a ferramenta `calcular` para cada expressão.
-2. Mostre a expressão usada e o resultado.
-3. A lógica de referência da ferramenta está em `scripts/calc.py` (leia só se houver dúvida
-   sobre operadores suportados).
-4. Termine SEMPRE com a linha `[skill:analise-numerica]`.
+1. Never compute in your head: call the `calculate` tool for every expression.
+2. Show the expression you used and its result.
+3. The tool's reference logic lives in `scripts/calc.py` (read it only if you are
+   unsure which operators are supported).
+4. ALWAYS end with the line `[skill:numeric-analysis]`.

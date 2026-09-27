@@ -1,4 +1,4 @@
-"""Avaliador aritmético seguro (mesma lógica da tool `calcular`)."""
+"""Safe arithmetic evaluator (same logic backing the `calculate` tool)."""
 import ast
 import operator as op
 
@@ -14,7 +14,7 @@ def safe_eval(expr: str) -> float:
             return OPS[type(node.op)](_ev(node.left), _ev(node.right))
         if isinstance(node, ast.UnaryOp) and type(node.op) in OPS:
             return OPS[type(node.op)](_ev(node.operand))
-        raise ValueError(f"Expressão não suportada: {ast.dump(node)}")
+        raise ValueError(f"Unsupported expression: {ast.dump(node)}")
     return _ev(ast.parse(expr, mode="eval").body)
 
 

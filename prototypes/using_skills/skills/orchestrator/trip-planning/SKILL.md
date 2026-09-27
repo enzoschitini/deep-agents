@@ -1,16 +1,16 @@
 ---
-name: planejamento-viagem
+name: trip-planning
 description: >-
-  Monta roteiros de viagem dia a dia. Use quando o usuário pedir roteiro,
-  itinerário ou planejamento de viagem para uma cidade ou país.
+  Builds day-by-day travel itineraries. Use when the user asks for an itinerary,
+  a travel plan, or a trip schedule for a city or country.
 ---
 
-# planejamento-viagem
+# trip-planning
 
-## Instruções
+## Instructions
 
-1. Pergunte (ou assuma e declare) número de dias e perfil do viajante.
-2. Para cada dia, liste manhã / tarde / noite com 1 atividade cada.
-3. Se o roteiro envolver orçamento ou contas, delegue os cálculos ao subagente
-   `analista` via ferramenta `task` — não faça contas de cabeça.
-4. Termine SEMPRE com a linha `[skill:planejamento-viagem]`.
+1. Ask for (or assume and state) the number of days and the traveler profile.
+2. For each day, list morning / afternoon / evening with one activity each.
+3. If the itinerary involves a budget or any arithmetic, delegate the math to the
+   `analyst` subagent through the `task` tool — never do the math in your head.
+4. ALWAYS end with the line `[skill:trip-planning]`.
