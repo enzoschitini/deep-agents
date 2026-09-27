@@ -88,10 +88,13 @@ cd prototypes/using_skills
 
 python validate.py            # offline suite, no API key — 23 checks
 python validate.py --live     # optional: a real LLM picks the skills itself
-python agent.py               # one-shot run with the default prompt
-python agent.py "your question"
-python agent.py --chat        # interactive chat (needs ANTHROPIC_API_KEY)
+python run_agent.py           # one-shot run with the default prompt
+python run_agent.py "your question"
+python run_agent.py --chat    # interactive chat (needs ANTHROPIC_API_KEY)
 ```
+
+`agent.py` holds only the agent definition (tools, prompts, subagent, permissions);
+`run_agent.py` owns execution and terminal rendering.
 
 `--chat` covers the part no test captures: watching the agent *decide*. It echoes every
 tool call (`→ read_file(...)`, `→ task(analyst, ...)`) before the answer, so you can

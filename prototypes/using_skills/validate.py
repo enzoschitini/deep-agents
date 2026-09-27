@@ -12,6 +12,7 @@ Modes:
 """
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 import uuid
@@ -22,7 +23,10 @@ from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langgraph.types import Command
 
-from agent import ROOT, build_agent
+# `python -m ...` puts the CWD on sys.path, not this directory, so `agent` would not resolve.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from agent import ROOT, build_agent  # noqa: E402
 
 ORCH = "/skills/orchestrator"
 ANALYST = "/skills/analyst"
