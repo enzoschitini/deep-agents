@@ -11,17 +11,20 @@ Usage:
 # TEMPLATE NOTES — delete this block and every `# ADAPT` comment once the file is filled in.
 # Everything outside the ADAPT spots is the standard engine shared by all prototypes:
 # colors, banner, transcript echo, approval pauses, REPL loop, one-shot. Keep it as is so
-# every prototype looks and behaves the same in the terminal. The ADAPT spots are:
-#   imports          which option tables agent.py exposes
+# every prototype looks and behaves the same in the terminal.
+# Language: every string the user reads is Portuguese (subtitle, HELP, notices, argparse
+# texts, prompts); flags, slash-command names, identifiers and comments stay English.
+# The ADAPT spots are:
+#   imports          which option tables options.py exposes
 #   TOOL_STYLES      one color per kind of action (add the agent's custom tools)
 #   LEGEND           the kinds shown under the banner (only kinds this agent has)
 #   OPTION_STYLES    color for each value of each option shown in the banner
 #   OPTION_LABELS    how each option is labelled in the banner
-#   SUBTITLE         "LangChain Deep Agents · <topic> playground"
+#   SUBTITLE         "LangChain Deep Agents · playground de <topic>"
 #   _fmt_args        which argument summarizes a custom tool call
 #   _fmt_call        the "◆ ..." highlight for the moment the doc's key mechanism fires
 #   HELP + commands  slash commands that inspect/toggle what the doc is about
-#   DEFAULT_PROMPT   one prompt that exercises as many of the doc's topics as possible
+#   DEFAULT_PROMPT   one Portuguese prompt exercising as many of the doc's topics as possible
 #   main()           CLI flags -> build_agent options
 from __future__ import annotations
 
@@ -36,7 +39,8 @@ from langgraph.types import Command
 # `python -m ...` puts the CWD on sys.path, not this directory, so `agent` would not resolve.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from agent import DEFAULT_MODEL, build_agent  # noqa: E402  # ADAPT: also import the option tables (e.g. PERMISSION_MODES)
+from agent import DEFAULT_MODEL, build_agent  # noqa: E402
+# ADAPT: the option tables this topic exposes, e.g. `from options import PERMISSION_MODES  # noqa: E402`
 
 # ------------------------------------------------------------------- colors
 STYLES = {
@@ -105,7 +109,7 @@ LOGO = [
     "██  ██ ██  ██ ██     ██  ███   ██  ",
     "██  ██  █████ ██████ ██   ██   ██  ",
 ]
-SUBTITLE = "LangChain Deep Agents · <topic> playground"  # ADAPT
+SUBTITLE = "LangChain Deep Agents · playground de <topic>"  # ADAPT
 
 
 def print_banner(model: str, options: dict) -> None:
@@ -131,7 +135,7 @@ def print_banner(model: str, options: dict) -> None:
         status += f"   {paint('·', 'dim')}   {paint(label, 'dim')} {paint(value, OPTION_STYLES.get(value, 'blue'), 'bold')}"
     print("\n" + status)
     print("  " + "  ".join(paint(f"● {kind}", style) for kind, style in LEGEND))
-    print(paint("  /help for commands, /exit to quit.", "dim") + "\n")
+    print(paint("  /help para ver os comandos, /exit para sair.", "dim") + "\n")
 
 
 # ---------------------------------------------------------------- transcript
@@ -181,12 +185,12 @@ def _ask_decisions(interrupt) -> Command:
     """Ask the human about every paused action; the resume needs one decision per action."""
     decisions = []
     for request in interrupt.value["action_requests"]:
-        print(f"\n  {paint(' PAUSED ', 'yellow', 'bold')} the agent wants to run")
+        print(f"\n  {paint(' PAUSADO ', 'yellow', 'bold')} o agente quer executar")
         print(f"  {_fmt_call(request['name'], request['args'])}")
-        if input(paint("  approve? [y/N] ", "yellow")).strip().lower().startswith("y"):
+        if input(paint("  aprovar? [s/N] ", "yellow")).strip().lower().startswith(("s", "y")):
             decisions.append({"type": "approve"})
         else:
-            decisions.append({"type": "reject", "message": "Human rejected the action."})
+            decisions.append({"type": "reject", "message": "O humano rejeitou a ação."})
     return Command(resume={"decisions": decisions})
 
 
@@ -207,14 +211,14 @@ def turn(agent, payload, config) -> None:
 
     answer = message_text(agent.get_state(config).values["messages"][-1])
     answer = MARKER.sub(lambda m: paint(m.group(0), "green", "bold"), answer)
-    print(f"\n{paint('agent', 'orange', 'bold')}\n{answer}\n")
+    print(f"\n{paint('agente', 'orange', 'bold')}\n{answer}\n")
 
 
 # --------------------------------------------------------------------- chat
 # ADAPT: one line per topic command, keeping /help and /exit last.
 HELP = """
-  /help             show this help
-  /exit             quit
+  /help             mostra esta ajuda
+  /exit             sai
 """
 
 
@@ -229,7 +233,7 @@ def chat(model: str, options: dict) -> None:
 
     while True:
         try:
-            line = input(paint("you> ", "orange", "bold")).strip()
+            line = input(paint("você> ", "orange", "bold")).strip()
         except (EOFError, KeyboardInterrupt):
             print()
             return
@@ -246,16 +250,16 @@ def chat(model: str, options: dict) -> None:
             #   inspect state  -> agent.get_state(config).values.get("<key>") and print it
             #   switch option  -> validate arg, options["<name>"] = arg,
             #                     agent = build_agent(model=model, **options), then
-            #                     notice("... (conversation restarted).", OPTION_STYLES[arg])
+            #                     notice("... (conversa reiniciada).", OPTION_STYLES[arg])
             else:
-                notice("unknown command — /help lists the available ones.", "red")
+                notice("comando desconhecido — /help lista os disponíveis.", "red")
             continue
 
         turn(agent, {"messages": [{"role": "user", "content": line}]}, config)
 
 
 # ----------------------------------------------------------------- one-shot
-DEFAULT_PROMPT = "<one prompt that exercises as many of the doc's topics as possible>"  # ADAPT
+DEFAULT_PROMPT = "<um prompt em português que exercite o máximo de tópicos da doc>"  # ADAPT
 
 
 def one_shot(question: str, model: str, options: dict) -> None:
@@ -268,9 +272,9 @@ def one_shot(question: str, model: str, options: dict) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the Deep Agents <topic> playground.")  # ADAPT
-    parser.add_argument("question", nargs="*", help="question for a one-shot run")
-    parser.add_argument("--chat", action="store_true", help="interactive terminal chat")
+    parser = argparse.ArgumentParser(description="Executa o playground <topic> do Deep Agents.")  # ADAPT
+    parser.add_argument("question", nargs="*", help="pergunta para uma execução one-shot")
+    parser.add_argument("--chat", action="store_true", help="chat interativo no terminal")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     # ADAPT: one flag per build_agent option, choices taken from agent.py's tables, e.g.
     # parser.add_argument("--mode", default="deny", choices=list(PERMISSION_MODES))

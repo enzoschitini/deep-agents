@@ -6,7 +6,11 @@ Checks that:
   3. build_agent(model=<fake model>) builds and answers one turn;
   4. run_agent.py --help exits cleanly and no template `ADAPT` markers are left;
   5. every SKILL.md has valid frontmatter whose name matches its directory
-     (a mismatch makes Deep Agents skip the skill silently).
+     (a mismatch makes Deep Agents skip the skill silently);
+  6. the layout holds: usage.md is there and lowercase, agent.py stays within its
+     line budget and carries no prompt, option table or subagent dict, and no module
+     grew past ~200 lines;
+  7. the system prompt carries the rule that makes the agent answer in Portuguese.
 
 It also prints the tools and the system prompt the main agent's model received, which
 is the quickest way to confirm that skills, memory, subagents and custom tools are wired.
@@ -31,6 +35,8 @@ from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 
 NAME_RULE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+# Things that belong in prompts.py / options.py / subagents.py, not in agent.py.
+MISPLACED_IN_AGENT = re.compile(r"^[A-Z][A-Z0-9_]*(_PROMPT|_PROMPTS|_MODES|_OPTIONS|_SOURCES|_BACKENDS)\s*(:|=)")
 failures: list[str] = []
 
 
@@ -94,8 +100,12 @@ def main() -> None:
     print(f"\nsmoke test: {folder}\n")
 
     print("files")
+    entries = {p.name for p in folder.iterdir()}  # exact names: Windows paths are case-insensitive
     for name in ("agent.py", "run_agent.py"):
         check(f"{name} exists", (folder / name).is_file())
+    check("usage.md exists (lowercase, not USAGE.md)", "usage.md" in entries,
+          "found " + (", ".join(sorted(n for n in entries if n.lower() == "usage.md")) or "nothing"))
+    broken = False
     for py in sorted(folder.rglob("*.py")):
         if "__pycache__" in py.parts:
             continue
@@ -103,13 +113,31 @@ def main() -> None:
             py_compile.compile(str(py), doraise=True)
         except py_compile.PyCompileError as e:
             check(f"compiles: {py.relative_to(folder)}", False, str(e).splitlines()[-1])
-    if failures:
+            broken = True
+    if broken or not (folder / "agent.py").is_file():  # nothing below can run
         sys.exit(1)
+
+    print("\nlayout")
+    agent_lines = (folder / "agent.py").read_text(encoding="utf-8").splitlines()
+    check("agent.py within its ~120-line budget", len(agent_lines) <= 140, f"{len(agent_lines)} lines")
+    misplaced = [f"{n}: {line.split('=')[0].strip()}" for n, line in enumerate(agent_lines, 1)
+                 if MISPLACED_IN_AGENT.match(line)]
+    check("agent.py holds no prompts, option tables or subagent dicts", not misplaced,
+          "; ".join(misplaced[:4]) + (" ..." if len(misplaced) > 4 else ""))
+    oversized = []
+    for py in sorted(folder.rglob("*.py")):
+        if "__pycache__" in py.parts or py.name == "run_agent.py":  # the shared engine sets its own size
+            continue
+        n = len(py.read_text(encoding="utf-8").splitlines())
+        if n > 220:
+            oversized.append(f"{py.relative_to(folder).as_posix()} ({n})")
+    check("no module over ~200 lines", not oversized, ", ".join(oversized))
 
     print("\nagent.py")
     sys.path.insert(0, str(folder))
     spec = importlib.util.spec_from_file_location("agent", folder / "agent.py")
     agent_mod = importlib.util.module_from_spec(spec)
+    sys.modules["agent"] = agent_mod  # dataclasses and pydantic resolve annotations through sys.modules
     spec.loader.exec_module(agent_mod)
     check("exposes DEFAULT_MODEL", hasattr(agent_mod, "DEFAULT_MODEL"), getattr(agent_mod, "DEFAULT_MODEL", ""))
     check("exposes build_agent()", callable(getattr(agent_mod, "build_agent", None)))
@@ -132,6 +160,8 @@ def main() -> None:
     if fake.prompts:
         prompt = fake.prompts[0]
         print(f"  system prompt: {len(prompt)} chars")
+        check("system prompt asks for Portuguese answers", "portugu" in prompt.lower(),
+              "no 'Responda sempre em portugues...' rule reached the model")
         if args.prompt:
             print("\n" + prompt + "\n")
 
