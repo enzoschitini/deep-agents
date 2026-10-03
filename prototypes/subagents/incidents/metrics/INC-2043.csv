@@ -1,0 +1,8 @@
+metrica,valor,unidade,margem_erro,metodo_de_coleta
+duracao_total,48,minutos,0,timestamps do log
+usuarios_afetados,12480,usuarios,"+/- 900",sessoes unicas com 503
+checkouts_perdidos,3140,pedidos,"+/- 210",diferenca vs. baseline da semana
+ticket_medio,187.40,BRL,"+/- 12.50",media movel de 7 dias
+receita_em_risco,588436.00,BRL,"+/- 48000",checkouts perdidos x ticket medio
+taxa_de_erro_pico,6.4,percentual,"+/- 0.2",janela de 1 minuto
+atraso_de_deteccao,6,minutos,0,primeiro 503 ate o alerta
