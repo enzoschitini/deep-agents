@@ -69,12 +69,9 @@ Create a `.env` file in the project root with the following variables:
 
 | **Variable** | **Description** |
 | --- | --- |
-| `ENV_NAME` | --- |
+| `ANTHROPIC_API_KEY` | API key for Anthropic (Claude) models. Required by the default model in every prototype (`anthropic:claude-sonnet-4-6`); get one at console.anthropic.com. |
 
 ```
 # LLM's
-OPENAI_API_KEY=********************
-GEMINI_API_KEY=********************
-GROQ_API_KEY=********************
 ANTHROPIC_API_KEY=********************
 ```
