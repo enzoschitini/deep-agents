@@ -1,0 +1,51 @@
+{
+  "messages": [
+    {
+      "content": "Ciao",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": "a1185c58-141f-4be6-9d52-e62333c4fdab"
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Ciao! Come posso aiutarti?",
+          "annotations": [],
+          "id": "msg_088b877078bfc2e8006afe0caede0887d29416e2b5251573ae"
+        }
+      ],
+      "additional_kwargs": {},
+      "response_metadata": {
+        "id": "resp_088b877078bfc2e8006afe0cacd70087d2b52e2a4c7f4ee900",
+        "created_at": 1795034284.0,
+        "metadata": {},
+        "model": "gpt-6.1-sol",
+        "object": "response",
+        "service_tier": "default",
+        "status": "completed",
+        "model_provider": "openai",
+        "model_name": "gpt-6.1-sol"
+      },
+      "type": "ai",
+      "name": null,
+      "id": "resp_088b877078bfc2e8006afe0cacd70087d2b52e2a4c7f4ee900",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": {
+        "input_tokens": 6482,
+        "output_tokens": 12,
+        "total_tokens": 6494,
+        "input_token_details": {
+          "cache_read": 6473
+        },
+        "output_token_details": {
+          "reasoning": 0
+        }
+      }
+    }
+  ],
+  "files": {}
+}
