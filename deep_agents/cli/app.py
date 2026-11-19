@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from rich.console import Console
 
 from deep_agents.cli.banner import Banner
 from deep_agents.cli.commands import Command, CommandRegistry
+from deep_agents.cli.models import AVAILABLE_MODELS, resolve_choice
 from deep_agents.cli.renderer import Renderer
 from deep_agents.cli.theme import APP_NAME, APP_VERSION
 from deep_agents.utils.json_manager import extract_response_text, manage_result_json
@@ -30,9 +31,14 @@ class ChatCLI:
         version: str = APP_VERSION,
         agent_name: str | None = None,
         console: Console | None = None,
+        agent_factory: Callable[[Any], tuple[Any, Any]] | None = None,
+        models: list | None = None,
     ) -> None:
+        """`agent_factory(model_config) -> (agent, gateway)` habilita o comando /modello."""
         self.agent = agent
         self.gateway = gateway
+        self.agent_factory = agent_factory
+        self.models = models if models is not None else AVAILABLE_MODELS
         self.agent_name = agent_name or getattr(gateway.config, "model_id", "agent")
         self.console = console or Console()
         self.banner = Banner(name, version, self.agent_name)
@@ -94,6 +100,8 @@ class ChatCLI:
         registry.register(
             Command("/esci", "termina la chat (anche: /exit, /quit)", self._cmd_exit, ("/exit", "/quit", "exit", "quit"))
         )
+        if self.agent_factory is not None:
+            registry.register(Command("/modello", "scegli il modello da usare", self._cmd_model))
         return registry
 
     def _cmd_help(self) -> None:
@@ -107,6 +115,34 @@ class ChatCLI:
 
     def _cmd_metrics(self) -> None:
         self.view.totals_table(self.gateway.totals())
+
+    def _cmd_model(self) -> None:
+        current = self.gateway.config
+        self.view.model_menu(self.models, current.spec)
+        try:
+            choice = self.view.model_prompt().strip()
+        except (EOFError, KeyboardInterrupt):
+            choice = ""
+        if not choice:
+            self.view.notice("Nessuna modifica.")
+            return
+        new_config = resolve_choice(choice, self.models, current)
+        if new_config is None:
+            self.view.notice("Scelta non valida.")
+            return
+        if new_config.spec == current.spec:
+            self.view.notice("È già il modello in uso.")
+            return
+        try:
+            with self.view.status(f"carico {new_config.spec}…"):
+                agent, gateway = self.agent_factory(new_config)
+        except Exception as e:
+            self.view.error(e)  # mantém o modelo anterior
+            return
+        self.agent, self.gateway = agent, gateway
+        self.agent_name = new_config.model_id
+        self.banner.agent_name = self.view.agent_name = self.agent_name
+        self.view.notice(f"Modello impostato: {new_config.spec} (la conversazione continua)")
 
     def _cmd_exit(self) -> None:
         self._running = False

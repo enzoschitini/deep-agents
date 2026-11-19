@@ -63,10 +63,10 @@ class Renderer:
         self.console.print(Text(f"  {format_metrics(report)}", style=MUTED))
         self.console.print()
 
-    def status(self):
+    def status(self, message: str | None = None):
         """Spinner de espera (context manager)."""
         return self.console.status(
-            f"[{AGENT_COLOR}]{self.agent_name} sta pensando…[/]",
+            f"[{AGENT_COLOR}]{message or f'{self.agent_name} sta pensando…'}[/]",
             spinner="dots",
             spinner_style=AGENT_COLOR,
         )
@@ -101,6 +101,19 @@ class Renderer:
         for key, value in totals.items():
             table.add_row(str(key), f"{value:.4f}" if isinstance(value, float) else str(value))
         self._panel(table, "Sessione", MUTED)
+
+    def model_menu(self, models: list, current_spec: str) -> None:
+        table = Table(box=None, show_header=False, padding=(0, 2))
+        table.add_column(style=f"bold {USER_COLOR}", justify="right")
+        table.add_column()
+        table.add_column(style=AGENT_COLOR)
+        for i, m in enumerate(models, start=1):
+            is_current = m.spec == current_spec
+            table.add_row(str(i), m.spec, "● attuale" if is_current else "")
+        self._panel(table, "Scegli il modello", AGENT_COLOR)
+
+    def model_prompt(self) -> str:
+        return self.console.input(f"[{MUTED}]numero o provider:modello (invio per annullare)[/] [bold {USER_COLOR}]❯[/] ")
 
     # -- interno
     def _panel(self, content: Any, title: str, color: str, *, padding: tuple[int, int] = (0, 1)) -> None:

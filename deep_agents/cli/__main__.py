@@ -6,12 +6,23 @@ _RAIZ = Path(__file__).resolve().parents[2]
 if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
 
-from deep_agents.agent import agent, gateway  # noqa: E402
+from deep_agents.agent import build_agent  # noqa: E402
 from deep_agents.cli import ChatCLI  # noqa: E402
+from deep_agents.model.model_config import ModelConfig  # noqa: E402
+
+# Modelo usado pela CLI: altere aqui (provider "openai", "anthropic", "google_genai", ...).
+MODEL = ModelConfig(
+    provider="openai",
+    model_id="gpt-6.1-sol",
+    timeout=120,
+    max_retries=2,
+    # temperature=..., max_tokens=..., extra={...}  # controles opcionais
+)
 
 
-def chat_loop() -> None:
-    ChatCLI(agent, gateway).run()
+def chat_loop(model: ModelConfig = MODEL) -> None:
+    agent, gateway = build_agent(model)
+    ChatCLI(agent, gateway, agent_factory=build_agent).run()
 
 
 # python -m deep_agents.cli

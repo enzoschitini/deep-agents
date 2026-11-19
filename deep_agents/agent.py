@@ -6,6 +6,8 @@ _RAIZ = Path(__file__).resolve().parents[1]
 if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
 
+from typing import Any  # noqa: E402
+
 from deepagents import create_deep_agent  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
@@ -27,23 +29,16 @@ You have access to an internet search tool as your primary means of gathering in
 Use this to run an internet search for a given query. You can specify the max number of results to return, the topic, and whether raw content should be included.
 """
 
-# Model only: the gateway applies per-provider rules (renamed/dropped params)
-# and collects per-call metrics (tokens, latency, tool runs) in gateway.history.
-gateway = LLMGateway(
-    ModelConfig(
-        provider="openai",
-        model_id="gpt-6.1-sol",
-        timeout=120,
-        max_retries=2,
-        # temperature=..., max_tokens=..., extra={...}  # optional controls
+def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
+    """Create the agent for the given model.
+
+    The gateway applies per-provider rules (renamed/dropped params) and collects
+    per-call metrics (tokens, latency, tool runs) in gateway.history.
+    """
+    gateway = LLMGateway(config)
+    agent = create_deep_agent(
+        model=gateway.build(),
+        tools=[internet_search],
+        system_prompt=research_instructions,
     )
-)
-
-# The agent itself is created here, receiving the model configured by the gateway.
-agent = create_deep_agent(
-    model=gateway.build(),
-    tools=[internet_search],
-    system_prompt=research_instructions,
-)
-
-# python -m deep_agents.cli
+    return agent, gateway

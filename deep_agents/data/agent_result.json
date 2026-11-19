@@ -1,47 +1,46 @@
 {
   "messages": [
     {
-      "content": "Ciao!! Mi chiamo Enzo",
+      "content": "Oi",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "human",
       "name": null,
-      "id": "c70beeca-f47c-4c82-a392-b226268d550f"
+      "id": "7a77b499-e835-4546-b075-0aeda653af07"
     },
     {
       "content": [
         {
           "type": "text",
-          "text": "Ciao Enzo! Piacere di conoscerti. Come posso aiutarti oggi?",
+          "text": "Oi! Como posso te ajudar hoje? 😊",
           "annotations": [],
-          "id": "msg_05cf80af2a029302006aff49af4de087d2bd2bc22c953b8bd7",
-          "phase": "final_answer"
+          "id": "msg_010367e26d93c8cf006aff701f059087d2b6a99c67e2e10593"
         }
       ],
       "additional_kwargs": {},
       "response_metadata": {
-        "id": "resp_05cf80af2a029302006aff49ae360c87d2930a06f65fe628c6",
-        "created_at": 1795115438.0,
+        "id": "resp_010367e26d93c8cf006aff701e471087d2989282f147fcf08c",
+        "created_at": 1795125278.0,
         "metadata": {},
-        "model": "gpt-6.1-sol",
+        "model": "gpt-4.1-2025-04-14",
         "object": "response",
         "service_tier": "default",
         "status": "completed",
         "model_provider": "openai",
-        "model_name": "gpt-6.1-sol"
+        "model_name": "gpt-4.1-2025-04-14"
       },
       "type": "ai",
       "name": null,
-      "id": "resp_05cf80af2a029302006aff49ae360c87d2930a06f65fe628c6",
+      "id": "resp_010367e26d93c8cf006aff701e471087d2989282f147fcf08c",
       "tool_calls": [],
       "invalid_tool_calls": [],
       "usage_metadata": {
-        "input_tokens": 6488,
-        "output_tokens": 23,
-        "total_tokens": 6511,
+        "input_tokens": 2335,
+        "output_tokens": 11,
+        "total_tokens": 2346,
         "input_token_details": {
-          "cache_creation": 12,
-          "cache_read": 6473
+          "cache_creation": 0,
+          "cache_read": 0
         },
         "output_token_details": {
           "reasoning": 0
@@ -49,47 +48,93 @@
       }
     },
     {
-      "content": "Ottimo!",
+      "content": "Crie um subagent pra criar um conteudo",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "human",
       "name": null,
-      "id": "3ad8ba11-da2b-4311-a790-03f09e82adeb"
+      "id": "ca76bbbb-972d-4acd-a983-decdc46a15e2"
     },
     {
       "content": [
         {
           "type": "text",
-          "text": "Dimmi pure, Enzo: di cosa ti va di parlare?",
+          "text": "Claro! Para criar um subagent (subagente) que seja capaz de criar um conteúdo, preciso de algumas informações para personalizar exatamente como você deseja:\n\n1. **Qual é o tipo de conteúdo?**\n   - Texto (artigo, post, redação, roteiro, etc.)\n   - Imagem ou vídeo (descrição detalhada, ideias, etc.)\n   - Outro formato? (me diga qual!)\n\n2. **Qual é o tema/assunto?**\n   - Ex: tecnologia, moda, educação, entretenimento, esportes, etc.\n\n3. **Qual o público-alvo?**\n   - Idade, interesses, nível de conhecimento, etc.\n\n4. **Quais diretrizes específicas?**\n   - Extensão do conteúdo, tom da escrita (formal, informal, descontraído), pontos obrigatórios, palavras-chave, etc.\n\nMe envie essas respostas e crio o subagente perfeitamente adaptado para você! Se quiser um exemplo simples, posso montar um agora mesmo. Quer seguir com um exemplo genérico?",
           "annotations": [],
-          "id": "msg_05cf80af2a029302006aff49beca9c87d2888198fddc0cbbf1",
-          "phase": "final_answer"
+          "id": "msg_010367e26d93c8cf006aff7037811887d29351824fa386eebb"
         }
       ],
       "additional_kwargs": {},
       "response_metadata": {
-        "id": "resp_05cf80af2a029302006aff49bd770c87d28148d8db5dd346e9",
-        "created_at": 1795115453.0,
+        "id": "resp_010367e26d93c8cf006aff7036a6ec87d2948cb2d51eeaef41",
+        "created_at": 1795125302.0,
         "metadata": {},
-        "model": "gpt-6.1-sol",
+        "model": "gpt-4.1-2025-04-14",
         "object": "response",
         "service_tier": "default",
         "status": "completed",
         "model_provider": "openai",
-        "model_name": "gpt-6.1-sol"
+        "model_name": "gpt-4.1-2025-04-14"
       },
       "type": "ai",
       "name": null,
-      "id": "resp_05cf80af2a029302006aff49bd770c87d28148d8db5dd346e9",
+      "id": "resp_010367e26d93c8cf006aff7036a6ec87d2948cb2d51eeaef41",
       "tool_calls": [],
       "invalid_tool_calls": [],
       "usage_metadata": {
-        "input_tokens": 6520,
-        "output_tokens": 18,
-        "total_tokens": 6538,
+        "input_tokens": 2362,
+        "output_tokens": 215,
+        "total_tokens": 2577,
         "input_token_details": {
-          "cache_creation": 32,
-          "cache_read": 6485
+          "cache_creation": 0,
+          "cache_read": 0
+        },
+        "output_token_details": {
+          "reasoning": 0
+        }
+      }
+    },
+    {
+      "content": "decida vc",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": "b832b1a1-3706-4a94-b396-a39771426ab7"
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Ótimo! Vou criar um exemplo de subagente para gerar um conteúdo informativo, voltado para um público geral, sobre \"Inteligência Artificial no cotidiano\". O conteúdo será um breve artigo para blog, com linguagem acessível e tom explicativo.\n\nAqui está como eu desenvolvo esse subagente e sua instrução:\n\n---\n\n### Subagente: Criador de Conteúdo Informativo\n\n**Objetivo:**  \nGerar um artigo curto explicativo sobre temas de tecnologia, ciência ou tendências, adaptando a linguagem para um público geral (jovens e adultos sem conhecimento técnico avançado).\n\n**Instrua o Subagente da seguinte forma:**\n\n---\n\n#### Prompt para o Subagente:\n\n> **Tema:** Inteligência Artificial no cotidiano  \n>\n> **Instruções:**  \n> Escreva um artigo com cerca de 400 palavras, explicativo, usando uma linguagem clara e acessível.  \n> 1. Apresente o conceito básico de inteligência artificial (IA).  \n> 2. Dê exemplos simples de uso de IA no dia a dia das pessoas (celulares, plataformas de streaming, bancos, etc).  \n> 3. Comente sobre benefícios e possíveis desafios da implementação da IA em larga escala.  \n> 4. Finalize com uma reflexão otimista sobre o futuro da IA.  \n>\n> **Tom:**  \n> Informal, educativo e motivador.\n\n---\n\n#### Resultado esperado do subagente:\n\n---\n**Título:** Como a Inteligência Artificial já faz parte da sua rotina\n\n*Você já parou para pensar em quanta tecnologia te cerca todos os dias? Pode parecer coisa de filme de ficção científica, mas a Inteligência Artificial (IA) já está, há tempos, entre nós — e facilitando muito a nossa vida!*\n\nA IA é um ramo da tecnologia que faz com que máquinas “pensem” de maneira semelhante aos seres humanos: aprendendo com experiências, identificando padrões e tomando decisões. Mas, calma, nada de robôs dominando o mundo! Na prática, a IA está muito mais próxima do que você imagina.\n\nPor exemplo, sabe quando o seu celular sugere a palavra que você quer digitar? Ou quando você faz uma pesquisa no Google e ele já entende o que você está procurando? Tudo isso é IA! Plataformas de streaming, como Netflix ou Spotify, também usam IA para sugerir filmes, séries ou músicas de acordo com o seu gosto. Bancos usam IA para identificar possíveis fraudes, analisando milhares de transações em segundos.\n\nOs benefícios são muitos: praticidade, personalização de serviços, detecção rápida de problemas e mais tempo livre para você! Porém, tanto avanço também traz desafios, como questões de privacidade e mudanças no mercado de trabalho.\n\nApesar disso, o futuro é promissor. Com um bom uso da tecnologia, a IA tem tudo para continuar facilitando nossa vida — e quem sabe, resolver problemas ainda maiores. Então, da próxima vez que uma dica certeira aparecer no seu celular, lembre-se: pode agradecer à inteligência artificial!\n\n---\n\nSe quiser que eu execute esse subagente e gere um conteúdo personalizado, posso adaptá-lo para qualquer tema! Me avise o que prefere.",
+          "annotations": [],
+          "id": "msg_010367e26d93c8cf006aff70418a2087d2ab0a0e42ee61f8b1"
+        }
+      ],
+      "additional_kwargs": {},
+      "response_metadata": {
+        "id": "resp_010367e26d93c8cf006aff70410d1887d28015d4b50d84e7a5",
+        "created_at": 1795125313.0,
+        "metadata": {},
+        "model": "gpt-4.1-2025-04-14",
+        "object": "response",
+        "service_tier": "default",
+        "status": "completed",
+        "model_provider": "openai",
+        "model_name": "gpt-4.1-2025-04-14"
+      },
+      "type": "ai",
+      "name": null,
+      "id": "resp_010367e26d93c8cf006aff70410d1887d28015d4b50d84e7a5",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": {
+        "input_tokens": 2586,
+        "output_tokens": 656,
+        "total_tokens": 3242,
+        "input_token_details": {
+          "cache_creation": 0,
+          "cache_read": 0
         },
         "output_token_details": {
           "reasoning": 0
