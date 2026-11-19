@@ -1,27 +1,27 @@
 {
   "messages": [
     {
-      "content": "Ciao",
+      "content": "Ciao!! Mi chiamo Enzo",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "human",
       "name": null,
-      "id": "559cae31-55bd-477c-aefb-bade4dd43ed7"
+      "id": "c70beeca-f47c-4c82-a392-b226268d550f"
     },
     {
       "content": [
         {
           "type": "text",
-          "text": "Ciao! Come posso aiutarti?",
+          "text": "Ciao Enzo! Piacere di conoscerti. Come posso aiutarti oggi?",
           "annotations": [],
-          "id": "msg_0d31ae5280c6f62f006aff447c666487d28e12037b360b6b19",
+          "id": "msg_05cf80af2a029302006aff49af4de087d2bd2bc22c953b8bd7",
           "phase": "final_answer"
         }
       ],
       "additional_kwargs": {},
       "response_metadata": {
-        "id": "resp_0d31ae5280c6f62f006aff447b210487d29251ac41a3040f8d",
-        "created_at": 1795114107.0,
+        "id": "resp_05cf80af2a029302006aff49ae360c87d2930a06f65fe628c6",
+        "created_at": 1795115438.0,
         "metadata": {},
         "model": "gpt-6.1-sol",
         "object": "response",
@@ -32,16 +32,64 @@
       },
       "type": "ai",
       "name": null,
-      "id": "resp_0d31ae5280c6f62f006aff447b210487d29251ac41a3040f8d",
+      "id": "resp_05cf80af2a029302006aff49ae360c87d2930a06f65fe628c6",
       "tool_calls": [],
       "invalid_tool_calls": [],
       "usage_metadata": {
-        "input_tokens": 6482,
-        "output_tokens": 12,
-        "total_tokens": 6494,
+        "input_tokens": 6488,
+        "output_tokens": 23,
+        "total_tokens": 6511,
         "input_token_details": {
-          "cache_creation": 6479,
-          "cache_read": 0
+          "cache_creation": 12,
+          "cache_read": 6473
+        },
+        "output_token_details": {
+          "reasoning": 0
+        }
+      }
+    },
+    {
+      "content": "Ottimo!",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": "3ad8ba11-da2b-4311-a790-03f09e82adeb"
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Dimmi pure, Enzo: di cosa ti va di parlare?",
+          "annotations": [],
+          "id": "msg_05cf80af2a029302006aff49beca9c87d2888198fddc0cbbf1",
+          "phase": "final_answer"
+        }
+      ],
+      "additional_kwargs": {},
+      "response_metadata": {
+        "id": "resp_05cf80af2a029302006aff49bd770c87d28148d8db5dd346e9",
+        "created_at": 1795115453.0,
+        "metadata": {},
+        "model": "gpt-6.1-sol",
+        "object": "response",
+        "service_tier": "default",
+        "status": "completed",
+        "model_provider": "openai",
+        "model_name": "gpt-6.1-sol"
+      },
+      "type": "ai",
+      "name": null,
+      "id": "resp_05cf80af2a029302006aff49bd770c87d28148d8db5dd346e9",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": {
+        "input_tokens": 6520,
+        "output_tokens": 18,
+        "total_tokens": 6538,
+        "input_token_details": {
+          "cache_creation": 32,
+          "cache_read": 6485
         },
         "output_token_details": {
           "reasoning": 0

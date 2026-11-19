@@ -46,4 +46,4 @@ agent = create_deep_agent(
     system_prompt=research_instructions,
 )
 
-# python -m deep_agents.looping
+# python -m deep_agents.cli
