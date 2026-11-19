@@ -6,7 +6,7 @@
       "response_metadata": {},
       "type": "human",
       "name": null,
-      "id": "a1185c58-141f-4be6-9d52-e62333c4fdab"
+      "id": "559cae31-55bd-477c-aefb-bade4dd43ed7"
     },
     {
       "content": [
@@ -14,13 +14,14 @@
           "type": "text",
           "text": "Ciao! Come posso aiutarti?",
           "annotations": [],
-          "id": "msg_088b877078bfc2e8006afe0caede0887d29416e2b5251573ae"
+          "id": "msg_0d31ae5280c6f62f006aff447c666487d28e12037b360b6b19",
+          "phase": "final_answer"
         }
       ],
       "additional_kwargs": {},
       "response_metadata": {
-        "id": "resp_088b877078bfc2e8006afe0cacd70087d2b52e2a4c7f4ee900",
-        "created_at": 1795034284.0,
+        "id": "resp_0d31ae5280c6f62f006aff447b210487d29251ac41a3040f8d",
+        "created_at": 1795114107.0,
         "metadata": {},
         "model": "gpt-6.1-sol",
         "object": "response",
@@ -31,7 +32,7 @@
       },
       "type": "ai",
       "name": null,
-      "id": "resp_088b877078bfc2e8006afe0cacd70087d2b52e2a4c7f4ee900",
+      "id": "resp_0d31ae5280c6f62f006aff447b210487d29251ac41a3040f8d",
       "tool_calls": [],
       "invalid_tool_calls": [],
       "usage_metadata": {
@@ -39,7 +40,8 @@
         "output_tokens": 12,
         "total_tokens": 6494,
         "input_token_details": {
-          "cache_read": 6473
+          "cache_creation": 6479,
+          "cache_read": 0
         },
         "output_token_details": {
           "reasoning": 0

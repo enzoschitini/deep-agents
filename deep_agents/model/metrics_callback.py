@@ -11,7 +11,7 @@ from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import LLMResult
 
-from src.deep_agents.model.metrics import CallMetrics, RunReport
+from deep_agents.model.metrics import CallMetrics, RunReport
 
 
 def _extract_usage(msg: AIMessage | None, llm_output: dict | None, m: CallMetrics) -> None:

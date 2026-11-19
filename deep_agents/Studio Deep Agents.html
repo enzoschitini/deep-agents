@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio Deep Agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Struttura: app a schermo intero, senza scroll di pagina. Barra con tre viste (Panoramica, Percorso, Registro).
+   Percorso = elenco a sinistra + dettaglio a destra; ogni colonna scorre per conto suo. */
+:root {
+  --page: #c9481b;
+  --paper: #efe9df;
+  --paper2: #e6e0d4;
+  --ink: #1b1a17;
+  --muted: #6a645a;
+  --rule: #bdb6a8;
+  --rule-strong: #8f887a;
+  --accent: #c8461a;
+  --accent-ink: #f8f1e6;
+  --font-sans: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 7.4l2.5 2.5L11 4.2' fill='none' stroke='%23f8f1e6' stroke-width='1.6'/%3E%3C/svg%3E");
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; padding: 28px; background: var(--page); color: var(--ink); font: 400 13.5px/1.55 var(--font-mono); overflow: hidden; }
+@media (max-width: 700px) { body { padding: 0; } }
+h1, h2, h3, p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; border-radius: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lab { font: 500 10.5px/1.2 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.btn { font: 500 11px var(--font-mono); letter-spacing: .13em; text-transform: uppercase; padding: 11px 16px; border: 1px solid var(--ink); background: transparent; cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--paper2); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.solid { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.solid:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+.btn.sm { padding: 8px 13px; }
+
+.win { height: 100%; max-width: 1240px; margin: 0 auto; background: var(--paper); box-shadow: 0 1px 0 rgba(0,0,0,.25), 0 24px 40px -22px rgba(0,0,0,.4); display: flex; flex-direction: column; min-height: 0; }
+
+/* barra */
+.bar { display: flex; align-items: stretch; border-bottom: 1px solid var(--rule); min-height: 48px; flex: none; }
+.brand { display: flex; align-items: baseline; gap: 8px; padding: 0 28px; align-self: center; font: 500 15px var(--font-sans); letter-spacing: -.01em; white-space: nowrap; }
+.brand small { font: 400 9.5px var(--font-mono); letter-spacing: .12em; color: var(--muted); }
+.tabs { display: flex; }
+.tabs button { background: none; border: 0; border-left: 1px solid var(--rule); padding: 0 22px; cursor: pointer; font: 500 11.5px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: #4a463e; display: flex; align-items: center; gap: 8px; }
+.tabs button:last-child { border-right: 1px solid var(--rule); }
+.tabs button:hover { background: var(--paper2); }
+.tabs button[aria-selected="true"] { background: var(--paper2); color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+.tabs .bd { font: 500 10px var(--font-mono); background: var(--accent); color: var(--accent-ink); padding: 1px 6px; letter-spacing: .04em; }
+.tabs .bd:empty { display: none; }
+.right { margin-left: auto; display: flex; align-items: center; gap: 18px; padding: 0 20px 0 12px; }
+.state { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.state i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+@media (max-width: 860px) { .brand small, .state, .brand { display: none; } .tabs button { padding: 0 12px; } .tabs button:first-child { border-left: 0; } .right { padding: 0 10px; margin-left: auto; } }
+@media (max-width: 520px) { .tabs button { padding: 0 8px; letter-spacing: .06em; font-size: 10px; } .right .btn { padding: 8px 9px; font-size: 10px; letter-spacing: .06em; } }
+
+/* viste */
+.views { flex: 1; min-height: 0; position: relative; }
+.view { position: absolute; inset: 0; }
+.view[hidden] { display: none; }
+
+/* foot */
+.foot { border-top: 1px solid var(--rule); padding: 8px 20px; display: flex; gap: 14px; align-items: center; flex: none; flex-wrap: wrap; }
+.foot .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rule-strong); flex: none; }
+.foot .dot.ok { background: var(--accent); } .foot .dot.busy { background: #d49a1f; } .foot .dot.bad { background: #8a1f10; }
+.foot .sv { display: flex; gap: 8px; align-items: center; }
+.foot .bn { color: var(--accent); }
+.foot .sp { margin-left: auto; }
+@media (max-width: 700px) { .foot .sp { display: none; } }
+
+/* ---------- Panoramica ---------- */
+.home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); height: 100%; }
+@media (max-width: 860px) { .home { grid-template-columns: 1fr; overflow: auto; grid-auto-rows: min-content; } }
+.hl { padding: 26px 36px; display: flex; flex-direction: column; justify-content: center; gap: 20px; min-width: 0; overflow: auto; }
+@media (max-width: 600px) { .hl { padding: 22px 18px; } }
+.hl h1 { font: 500 clamp(32px, 4.4vw, 46px)/1.04 var(--font-sans); letter-spacing: -.035em; }
+.hl h1 em { font-style: normal; color: var(--accent); }
+.lede { max-width: 420px; font-size: 12px; line-height: 1.75; color: #5d574d; }
+.kv { border: 1px solid var(--rule); max-width: 420px; }
+.kv div { display: grid; grid-template-columns: auto 1fr; gap: 14px; padding: 9px 12px; border-top: 1px solid var(--rule); align-items: baseline; }
+.kv div:first-child { border-top: 0; }
+.kv .lab { font-size: 9.5px; }
+.kv b { font: 500 11.5px var(--font-mono); text-align: right; color: var(--accent); overflow-wrap: anywhere; }
+.kv b.k { color: var(--ink); }
+.acts { display: flex; gap: 10px; flex-wrap: wrap; }
+.hr { background: var(--paper2); border-left: 1px solid var(--rule); padding: 18px 22px; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+@media (max-width: 860px) { .hr { border-left: 0; border-top: 1px solid var(--rule); height: 460px; } }
+.hr svg { flex: 1; min-height: 0; width: 100%; margin: 6px 0; }
+.hr .cap { text-align: right; font: 400 10px/1.7 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+#stack g[data-b] { cursor: pointer; }
+#stack g[data-b]:hover .face { fill: #fffaf0; }
+#stack g[data-b]:hover text { text-decoration: underline; }
+
+/* ---------- Percorso: elenco + dettaglio ---------- */
+.pr { display: grid; grid-template-columns: 350px minmax(0, 1fr); height: 100%; }
+@media (max-width: 860px) { .pr { grid-template-columns: 1fr; } .pr .pd { display: none; } .pr.open .pl { display: none; } .pr.open .pd { display: flex; } }
+.pl { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--rule); }
+.pl-top { padding: 12px 14px; border-bottom: 1px solid var(--rule); display: grid; gap: 8px; flex: none; }
+.chips { display: flex; }
+.chip { flex: 1; background: none; border: 1px solid var(--rule); border-left: 0; padding: 6px 4px; cursor: pointer; font: 500 10px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: #4a463e; }
+.chip:first-child { border-left: 1px solid var(--rule); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.search { width: 100%; border: 1px solid var(--rule); background: transparent; padding: 7px 10px; font-size: 12px; }
+.search::placeholder { color: #8b8579; }
+.pl-list { flex: 1; overflow: auto; min-height: 0; }
+.gh { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; text-align: left; background: var(--paper); border: 0; border-bottom: 1px solid var(--rule); padding: 10px 14px; cursor: pointer; position: sticky; top: 0; z-index: 1; }
+.gh:hover { background: var(--paper2); }
+.gh .ar { font: 500 10px var(--font-mono); color: var(--muted); width: 10px; }
+.gh .gt { font: 500 13px var(--font-sans); letter-spacing: -.005em; }
+.gh .gt small { font: 500 10px var(--font-mono); color: var(--muted); letter-spacing: .12em; margin-right: 8px; }
+.gh .bar2 { grid-column: 2 / -1; height: 3px; background: var(--rule); }
+.gh .bar2 i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.row { width: 100%; display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: start; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--rule); padding: 9px 14px 9px 16px; cursor: pointer; position: relative; }
+.row:hover { background: var(--paper2); }
+.row[aria-current="true"] { background: var(--paper2); box-shadow: inset 3px 0 0 var(--accent); }
+.row .rn { font: 500 10.5px var(--font-mono); color: var(--muted); padding-top: 2px; letter-spacing: .06em; }
+.row .rt { font: 400 13px/1.35 var(--font-sans); }
+.row[data-s="done"] .rt { color: var(--muted); }
+.row[hidden], .gh[hidden] { display: none; }
+.mk { width: 13px; height: 13px; border: 1px solid var(--ink); margin-top: 3px; flex: none; }
+.mk[data-s="doing"] { border-color: var(--accent); background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
+.mk[data-s="done"] { border-color: var(--accent); background: var(--accent) var(--check) center/100% no-repeat; }
+.none { padding: 20px 16px; color: var(--muted); font-size: 12px; }
+
+.pd { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.pd-head { padding: 16px 28px 14px; border-bottom: 1px solid var(--rule); display: grid; gap: 10px; flex: none; }
+@media (max-width: 600px) { .pd-head { padding: 14px 16px; } }
+.crumb { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.back { display: none; background: none; border: 1px solid var(--rule-strong); padding: 5px 10px; cursor: pointer; font: 500 10.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+@media (max-width: 860px) { .back { display: inline-block; } }
+.pd-head h2 { font: 500 clamp(22px, 2.6vw, 28px)/1.15 var(--font-sans); letter-spacing: -.025em; }
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); justify-self: start; }
+.seg button { background: transparent; border: 0; padding: 8px 16px; cursor: pointer; font: 500 10.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--rule-strong); }
+.seg button:hover { background: var(--paper2); }
+.seg button[aria-pressed="true"][data-v="todo"] { background: var(--paper2); color: var(--ink); }
+.seg button[aria-pressed="true"][data-v="doing"] { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.seg button[aria-pressed="true"][data-v="done"] { background: var(--accent); color: var(--accent-ink); }
+.pd-body { flex: 1; overflow: auto; min-height: 0; padding: 18px 28px 22px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 600px) { .pd-body { padding: 16px; } }
+.blk { display: grid; gap: 8px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; }
+.spiega { display: grid; gap: 10px; max-width: 72ch; }
+.spiega p { font: 400 14px/1.7 var(--font-sans); color: #2c2a25; }
+.dash { color: var(--muted); font-size: 12px; }
+.nota { font-size: 11.5px; line-height: 1.7; color: #5d574d; border-left: 1px solid var(--rule-strong); padding-left: 12px; }
+.qs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.qs label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 12.5px; line-height: 1.55; }
+.qs input, .chk input { appearance: none; -webkit-appearance: none; flex: none; width: 14px; height: 14px; margin: 3px 0 0; border: 1px solid var(--ink); background: transparent; cursor: pointer; }
+.qs input:checked, .chk input:checked { background: var(--accent) var(--check) center/100% no-repeat; border-color: var(--accent); }
+.qs input:checked + span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--rule-strong); }
+.appunti { width: 100%; min-height: 150px; resize: vertical; background: var(--paper2); border: 1px solid var(--rule); padding: 10px 12px; font-size: 12.5px; line-height: 1.7; }
+.appunti::placeholder, .fld::placeholder { color: #8b8579; }
+.donedate { font: 500 10.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.pd-foot { border-top: 1px solid var(--rule); padding: 10px 28px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: none; background: var(--paper); }
+@media (max-width: 600px) { .pd-foot { padding: 10px 16px; } }
+.pd-foot .sp { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.hint { font: 400 10px var(--font-mono); letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+@media (max-width: 1000px) { .hint { display: none; } }
+
+/* ---------- Registro ---------- */
+.lg { display: grid; grid-template-columns: 350px minmax(0, 1fr); height: 100%; }
+@media (max-width: 860px) { .lg { grid-template-columns: 1fr; overflow: auto; grid-auto-rows: min-content; } }
+.lf { padding: 18px 20px; border-right: 1px solid var(--rule); display: grid; gap: 12px; align-content: start; overflow: auto; }
+@media (max-width: 860px) { .lf { border-right: 0; border-bottom: 1px solid var(--rule); } }
+.lf label { display: grid; gap: 6px; }
+.fld { background: var(--paper); border: 1px solid var(--rule); padding: 8px 10px; font-size: 12px; width: 100%; }
+.lr { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.lr-top { padding: 12px 20px; border-bottom: 1px solid var(--rule); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; flex: none; }
+.lr-top .chips { width: min(360px, 100%); }
+.lr-list { flex: 1; overflow: auto; min-height: 0; }
+.chk { display: inline-flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; }
+.chk.res span { color: var(--muted); text-decoration: line-through; }
+.tlog { border: 1px solid var(--rule); }
+.tlog .none { padding: 12px; }
+.ent { border-bottom: 1px solid var(--rule); min-width: 0; }
+.tlog .ent:last-child { border-bottom: 0; }
+.eh { width: 100%; display: grid; grid-template-columns: 78px minmax(0, 1fr) auto auto; gap: 12px; align-items: baseline; text-align: left; background: transparent; border: 0; padding: 11px 20px; cursor: pointer; }
+.tlog .eh { padding: 10px 12px; }
+.eh:hover { background: var(--paper2); }
+.eh .d { font: 500 11px var(--font-mono); color: var(--muted); }
+.eh .et { font: 500 13.5px/1.35 var(--font-sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.eh .et small { font: 500 10px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-left: 10px; }
+.eh .dbt { font: 500 9.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent); padding: 1px 6px; }
+.eh .ar { font: 500 10px var(--font-mono); color: var(--muted); width: 10px; text-align: center; }
+.eb { padding: 2px 20px 14px 110px; display: grid; gap: 10px; min-width: 0; }
+.tlog .eb { padding: 2px 12px 12px 102px; }
+.eb[hidden] { display: none; }
+.eb .did { font-size: 12.5px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.eb .nodesc { color: var(--muted); font-size: 12px; }
+.eb .acts2 { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.tp { background: none; border: 0; padding: 0; cursor: pointer; font: 500 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 600px) { .eh { grid-template-columns: 1fr auto auto; padding: 10px 14px; } .eh .d { grid-column: 1 / -1; } .eb, .tlog .eb { padding: 2px 14px 12px; } }
+.x { background: none; border: 0; cursor: pointer; font: 500 10px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 2px 4px; }
+.x:hover { color: var(--accent); }
+
+/* ---------- Finestra Markdown ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(27,26,23,.55); display: grid; place-items: center; padding: 16px; z-index: 10; }
+.overlay[hidden] { display: none; }
+.modal { background: var(--paper); border: 1px solid var(--ink); width: min(780px, 100%); max-height: 88vh; display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+.modal h3 { font: 500 20px var(--font-sans); letter-spacing: -.02em; }
+.modal textarea { flex: 1; min-height: 300px; font: 400 12px/1.6 var(--font-mono); background: var(--paper2); border: 1px solid var(--rule); padding: 10px; }
+.modal .row2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+/* ---------- Animazioni (tutte disattivate con prefers-reduced-motion) ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drop { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(.55); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+@keyframes pulse { 50% { opacity: .3; } }
+@keyframes sweep { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.btn, .chip, .tabs button, .seg button, .row, .gh, .eh, .x, .tp, .back { transition: background-color .16s, color .16s, border-color .16s, box-shadow .22s, transform .12s, filter .16s; }
+.btn:active:not(:disabled), .seg button:active, .chip:active { transform: translateY(1px); }
+.row { transition: background-color .16s, box-shadow .22s, padding-left .22s; }
+.row:hover:not([aria-current="true"]) { padding-left: 20px; }
+.mk { transition: background-color .2s, border-color .2s; }
+.mk.pop { animation: pop .38s cubic-bezier(.2, .8, .3, 1); }
+.qs input, .chk input { transition: background-color .15s, border-color .15s; }
+.view.enter { animation: rise .26s cubic-bezier(.2, .8, .2, 1); }
+.swap > * { animation: rise .32s cubic-bezier(.2, .8, .2, 1) backwards; }
+.swap > *:nth-child(2) { animation-delay: .04s; } .swap > *:nth-child(3) { animation-delay: .08s; }
+.swap > *:nth-child(4) { animation-delay: .12s; } .swap > *:nth-child(5) { animation-delay: .16s; } .swap > *:nth-child(6) { animation-delay: .2s; }
+.swap1 { animation: rise .28s cubic-bezier(.2, .8, .2, 1) backwards; }
+.donedate:not([hidden]) { animation: fade .4s; }
+.eb:not([hidden]) { animation: rise .22s ease-out; }
+.overlay:not([hidden]) { animation: fade .18s; }
+.overlay:not([hidden]) .modal { animation: rise .24s cubic-bezier(.2, .8, .2, 1); }
+.foot .dot { transition: background-color .3s; }
+.foot .dot.busy { animation: pulse 1s ease-in-out infinite; }
+.gh .bar2 i { transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.intro .hl > * { animation: rise .6s cubic-bezier(.2, .8, .2, 1) backwards; }
+.intro .hl > *:nth-child(2) { animation-delay: .07s; } .intro .hl > *:nth-child(3) { animation-delay: .14s; }
+.intro .hl > *:nth-child(4) { animation-delay: .21s; } .intro .hl > *:nth-child(5) { animation-delay: .28s; }
+.intro .hr { animation: fade .7s backwards; }
+.intro .kv div { animation: rise .5s cubic-bezier(.2, .8, .2, 1) backwards; }
+.intro .kv div:nth-child(1) { animation-delay: .3s; } .intro .kv div:nth-child(2) { animation-delay: .36s; } .intro .kv div:nth-child(3) { animation-delay: .42s; }
+.intro .kv div:nth-child(4) { animation-delay: .48s; } .intro .kv div:nth-child(5) { animation-delay: .54s; }
+.pl-list.intro .row, .pl-list.intro .gh { animation: rise .34s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(var(--i, 0) * 16ms); }
+#stack g[data-b] { transition: transform .22s cubic-bezier(.2, .8, .2, 1); }
+#stack g[data-b]:hover, #stack g[data-b]:focus-visible { transform: translateY(-6px); }
+#stack g.slab { animation: drop .6s cubic-bezier(.2, .8, .2, 1) backwards; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="bar">
+    <div class="brand">Studio Deep Agents <small>v0.7.40</small></div>
+    <div class="tabs" role="tablist" aria-label="Viste">
+      <button type="button" role="tab" data-view="home" aria-selected="true">Panoramica</button>
+      <button type="button" role="tab" data-view="path" aria-selected="false">Percorso</button>
+      <button type="button" role="tab" data-view="log" aria-selected="false">Registro <span class="bd" id="bdLog"></span></button>
+    </div>
+    <div class="right">
+      <span class="state lab"><i></i><span id="hdrState">Da iniziare</span></span>
+      <button class="btn sm" type="button" id="mdBtn">Esporta MD &rarr;</button>
+    </div>
+  </div>
+
+  <div class="views">
+    <!-- PANORAMICA -->
+    <section class="view home intro" id="v-home">
+      <div class="hl">
+        <p class="lab">Percorso personale / Deep Agents / <span id="eyeCount">25</span> argomenti</p>
+        <h1>Sto imparando<br>a costruire il mio<br><em>agente</em> da zero</h1>
+        <p class="lede">Otto blocchi, ognuno con una spiegazione, le domande da chiarire e i miei appunti. Scegli un piano della pila a destra, oppure continua da dove eri.</p>
+        <div class="kv" aria-label="Stato attuale">
+          <div><span class="lab">Stadio</span><b id="kvStage">Blocco 1</b></div>
+          <div><span class="lab">Argomenti fatti</span><b id="kvDone">0 / 25</b></div>
+          <div><span class="lab">In corso</span><b id="kvDoing">0</b></div>
+          <div><span class="lab">Dubbi aperti</span><b id="kvDoubt">0</b></div>
+          <div><span class="lab">Prossimo</span><b class="k" id="kvNext">—</b></div>
+        </div>
+        <div class="acts">
+          <button class="btn solid" type="button" id="nextGo">Continua dal prossimo argomento</button>
+          <button class="btn" type="button" data-view-go="log">Apri il registro</button>
+        </div>
+      </div>
+      <div class="hr">
+        <p class="lab">Vista isometrica &mdash; clicca un piano per aprire il blocco</p>
+        <svg id="stack" viewBox="0 0 560 548" role="img" aria-label="Pila isometrica degli otto blocchi: il bordo di ogni piano si colora con l'avanzamento"></svg>
+        <p class="cap">Rev 0.7.40 &nbsp;/&nbsp; <span id="capDate"></span></p>
+      </div>
+    </section>
+
+    <!-- PERCORSO -->
+    <section class="view" id="v-path" hidden>
+      <div class="pr" id="pr">
+        <div class="pl">
+          <div class="pl-top">
+            <div class="chips" id="filters" role="group" aria-label="Filtra per stato">
+              <button class="chip" type="button" data-f="all" aria-pressed="true">Tutti</button>
+              <button class="chip" type="button" data-f="todo" aria-pressed="false">Da fare</button>
+              <button class="chip" type="button" data-f="doing" aria-pressed="false">In corso</button>
+              <button class="chip" type="button" data-f="done" aria-pressed="false">Fatti</button>
+            </div>
+            <input class="search" id="search" type="search" placeholder="Cerca un argomento" aria-label="Cerca un argomento">
+          </div>
+          <div class="pl-list intro" id="list" title="Frecce su e giù per spostarti tra gli argomenti"></div>
+        </div>
+        <div class="pd">
+          <div class="pd-head">
+            <div class="crumb"><button class="back" type="button" id="back">&larr; Elenco</button><span class="lab" id="dCrumb"></span></div>
+            <h2 id="dTitle"></h2>
+            <div class="seg" id="dSeg" role="group" aria-label="Stato dell'argomento">
+              <button type="button" data-v="todo" aria-pressed="false">Da fare</button>
+              <button type="button" data-v="doing" aria-pressed="false">In corso</button>
+              <button type="button" data-v="done" aria-pressed="false">Fatto</button>
+            </div>
+          </div>
+          <div class="pd-body" id="dBody">
+            <div class="blk"><span class="lab">Di cosa si tratta</span><div class="spiega" id="dSp"></div></div>
+            <div class="nota" id="dNote" hidden></div>
+            <div class="blk"><span class="lab">Documentazione</span><div class="meta" id="dDocs"></div></div>
+            <div class="blk"><span class="lab" id="dQLab">Cosa voglio capire</span><ul class="qs" id="dQs"></ul></div>
+            <div class="blk"><span class="lab">Appunti</span><textarea class="appunti" id="dNotes" placeholder="Cosa ho imparato, cosa non mi è chiaro" maxlength="4000" aria-label="Appunti"></textarea><span class="donedate" id="dDone" hidden></span></div>
+            <div class="blk"><span class="lab" id="dLogLab">Registro di questo argomento</span><div class="tlog" id="dLog"></div></div>
+          </div>
+          <div class="pd-foot">
+            <button class="btn sm" type="button" id="prev">&larr; Precedente</button>
+            <button class="btn sm" type="button" id="next">Successivo &rarr;</button>
+            <span class="sp">
+              <button class="btn sm" type="button" id="toLog">Scrivi nel registro</button>
+              <button class="btn sm solid" type="button" id="doneNext">Fatto, vai avanti</button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGISTRO -->
+    <section class="view" id="v-log" hidden>
+      <div class="lg">
+        <form class="lf" id="logForm">
+          <span class="lab">Nuova voce</span>
+          <label><span class="lab">Data</span><input class="fld" type="date" id="logDate" required></label>
+          <label><span class="lab">Argomento</span><select class="fld" id="logTopic"></select></label>
+          <label><span class="lab">Titolo</span><input class="fld" type="text" id="logTitle" maxlength="80" required placeholder="Per esempio: Provato 04_skills.py"></label>
+          <label><span class="lab">Descrizione</span><textarea class="fld" id="logDid" rows="4" maxlength="2000" placeholder="Cosa ho fatto, cosa ho notato (si apre cliccando sul titolo)"></textarea></label>
+          <label><span class="lab">Dubbio aperto (facoltativo)</span><input class="fld" type="text" id="logDoubt" maxlength="300" placeholder="Una domanda da riprendere più tardi"></label>
+          <div><button class="btn solid" type="submit">Aggiungi al registro</button></div>
+        </form>
+        <div class="lr">
+          <div class="lr-top">
+            <div class="chips" id="logFilters" role="group" aria-label="Filtra le voci">
+              <button class="chip" type="button" data-lf="all" aria-pressed="true">Tutte le voci</button>
+              <button class="chip" type="button" data-lf="open" aria-pressed="false">Dubbi aperti</button>
+            </div>
+            <span class="lab" id="logCount"></span>
+          </div>
+          <div class="lr-list" id="logList"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    <span class="sv lab"><span class="dot" id="dot"></span><span id="savetxt">Caricamento…</span></span>
+    <span class="lab bn" id="banner" hidden></span>
+    <span class="lab sp">deepagents 0.7.40</span>
+  </footer>
+</div>
+
+<div class="overlay" id="mdOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mdTitle">
+    <h3 id="mdTitle">Studio in Markdown</h3>
+    <textarea id="mdText" readonly aria-label="Testo Markdown"></textarea>
+    <div class="row2">
+      <button class="btn solid" id="mdCopy" type="button">Copia</button>
+      <span id="mdMsg" class="lab"></span>
+      <span style="flex:1"></span>
+      <button class="btn" id="mdClose" type="button">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- Contenuto del percorso (uguale a STUDIO_DEEP_AGENTS.md) ---------- */
+var D = "https://docs.langchain.com/oss/python/";
+var BLOCKS = [
+  { id: "b1", title: "Basi", short: "Basi", topics: [
+    { id: "cli", title: "CLI: looping sul terminale",
+      docs: [["CLI overview", D + "deepagents/cli/overview"]],
+      note: "Nella documentazione il nome è in transizione (Deep Agents CLI e Deep Agents Code, dcode). Verifica quale comando esiste nella tua versione.",
+      qs: ["Come si installa e si avvia una sessione interattiva?", "Come funziona il ciclo nel terminale: richiesta, tool, risposta, nuova richiesta?", "Come si cambia modello e provider dalla CLI?"] },
+    { id: "modelli", title: "Impostare modelli diversi (modello, temperatura, ecc.)",
+      docs: [["Models", D + "deepagents/models"], ["Customization", D + "deepagents/customization"]],
+      qs: ["Che differenza c'è tra la stringa provider:modello e un modello già istanziato con init_chat_model?", "Quali parametri cambiano da provider a provider?", "Quando uso register_provider_profile (costruzione) e quando HarnessProfile (comportamento)?"] },
+    { id: "prompt", title: "Prompt, AGENTS.md e HarnessProfile",
+      docs: [["Customization: system prompt", D + "deepagents/customization"], ["Profiles", D + "deepagents/profiles"]],
+      note: "Verificato nel codice: il prompt finale è system_prompt, poi base_system_prompt, poi system_prompt_suffix. Senza system_prompt e senza profilo il prompt è vuoto (0.7.40).",
+      qs: ["In che ordine viene costruito il prompt finale?", "Cosa aggiungono i middleware (memory, skills, subagents) al prompt?", "Quando metto le istruzioni in AGENTS.md e quando nel system_prompt?"] },
+    { id: "skill", title: "Skill: una raccolta e come l'agent le usa",
+      docs: [["Skills", D + "deepagents/skills"]],
+      qs: ["Come scrivo una description che faccia scattare la skill al momento giusto?", "L'agent legge il SKILL.md (read_file) solo quando serve? Lo vedo nelle metriche?", "Quante skill posso avere prima che il catalogo pesi nel prompt?"] }
+  ]},
+  { id: "b2", title: "Memoria e risorse", short: "Memoria", topics: [
+    { id: "memoria", title: "Memoria, SummarizationMiddleware e banche dati",
+      docs: [["Memory", D + "deepagents/memory"], ["Retrieval", D + "deepagents/retrieval"], ["Backends", D + "deepagents/backends"]],
+      note: "Ho letto «banche dati» come database per memoria e recupero (Retrieval, StoreBackend). Correggi se intendevi altro.",
+      qs: ["Cosa rende memoria vera memory=[...]? (backend persistente più un agent che scrive con edit_file)", "Quando scatta il riassunto e come lo controllo (trigger, keep, summary_prompt)?", "Uso normale contro uso ottimizzato: quanti token costa la memoria a ogni chiamata?", "Come sostituisco InMemoryStore con uno store su disco o database?"] },
+    { id: "tool", title: "Tool: la base, per dare più risorse all'assistente",
+      docs: [["Tools", D + "deepagents/tools"]],
+      qs: ["Quali tool ha già l'agent e quali aggiungo con tools=[...]?", "Come scrivo una buona docstring, dato che è ciò che il modello legge?", "Come limito o nascondo un tool predefinito?"] },
+    { id: "browser", title: "Browser use",
+      docs: [["Browser use", D + "deepagents/browser-use"]],
+      qs: ["Quali strumenti dà all'agent per navigare e cosa richiede?", "Quali rischi ci sono (pagine con istruzioni dirette all'agent)?"] }
+  ]},
+  { id: "b3", title: "Infrastruttura", short: "Infrastruttura", topics: [
+    { id: "backends", title: "Backends",
+      docs: [["Backends", D + "deepagents/backends"]],
+      qs: ["Differenza tra StateBackend, FilesystemBackend, StoreBackend e CompositeBackend?", "Quando uso ciascuno?"] },
+    { id: "permissions", title: "Permissions",
+      docs: [["Permissions", D + "deepagents/permissions"]],
+      qs: ["Come limito dove l'agent può leggere e scrivere (permissions=)?", "Come si lega alla memoria scrivibile?"] },
+    { id: "multimodal", title: "Multimodal inputs e outputs",
+      docs: [["Multimodality", D + "deepagents/multimodal"]],
+      qs: ["Quali tipi di file accetta l'agent e con quali modelli?", "Cosa succede con i contenuti non supportati?"] }
+  ]},
+  { id: "b4", title: "Subagents", short: "Subagents", topics: [
+    { id: "subagents", title: "Subagents",
+      docs: [["Subagents", D + "deepagents/subagents"]],
+      qs: ["Come decide l'agent principale di delegare (la description)?", "Cosa significa contesto isolato?", "Come uso un modello diverso per un subagent?"] },
+    { id: "dynamic", title: "Dynamic subagents (beta)",
+      docs: [["Dynamic subagents", D + "deepagents/dynamic-subagents"]],
+      qs: ["In cosa differiscono dai subagent dichiarati in anticipo?", "Quando servono?"] },
+    { id: "async", title: "Async subagents",
+      docs: [["Async subagents", D + "deepagents/async-subagents"]],
+      qs: ["Come lavorano in parallelo e come si recuperano i risultati?", "Come si sommano le metriche?"] }
+  ]},
+  { id: "b5", title: "Osservare l'esecuzione", short: "Osservare", topics: [
+    { id: "streaming", title: "Streaming",
+      docs: [["Streaming", D + "deepagents/streaming"]],
+      qs: ["Quali modalità di streaming esistono?", "Cosa ricevo in ognuna?"] },
+    { id: "events", title: "Event streaming (beta)",
+      docs: [["Event streaming", D + "deepagents/event-streaming"]],
+      qs: ["Quali eventi emette l'agent (modello, tool, subagent)?", "Come li uso per un'interfaccia?"] },
+    { id: "callbacks", title: "Callbacks",
+      docs: [],
+      note: "Non ho trovato una pagina dedicata nel menu di Deep Agents: da cercare nella documentazione di LangChain.",
+      qs: ["Qual è la differenza tra callback (osservano) e middleware (possono modificare)?"] }
+  ]},
+  { id: "b6", title: "Middleware", short: "Middleware", topics: [
+    { id: "prebuilt", title: "Prebuilt middleware",
+      docs: [["Middleware overview", D + "langchain/middleware/overview"], ["Built-in middleware", D + "langchain/middleware/built-in"]],
+      qs: ["Quali middleware esistono già (retry, fallback, PII, human-in-the-loop)?", "Qual è l'ordine dello stack di Deep Agents?"] },
+    { id: "custom", title: "Custom middleware",
+      docs: [["Custom middleware", D + "langchain/middleware/custom"]],
+      qs: ["Quali hook ci sono (prima/dopo agent e modello, wrap_model_call, wrap_tool_call)?", "Perché non modificare attributi di self durante l'esecuzione? (si usa lo stato del grafo)"] }
+  ]},
+  { id: "b7", title: "Prestazioni e integrazioni", short: "Prestazioni", topics: [
+    { id: "context", title: "Context engineering",
+      docs: [["Context engineering", D + "deepagents/context-engineering"]],
+      qs: ["Cosa entra nel contesto a ogni chiamata?", "Come lo riduco (memoria, skill, riassunto) e come lo misuro con llm_gateway.py?"] },
+    { id: "sandboxes", title: "Sandboxes",
+      docs: [["Sandboxes", D + "deepagents/sandboxes"]],
+      qs: ["Cosa dà un backend sandbox (file isolati e tool execute)?", "Quale provider scelgo?"] },
+    { id: "interpreters", title: "Interpreters (beta)",
+      docs: [["Interpreters", D + "deepagents/interpreters"]],
+      qs: ["Cosa permette il tool eval (JavaScript in QuickJS)?", "Quando conviene usarlo?"] },
+    { id: "mcp", title: "MCP",
+      docs: [["MCP with LangChain", D + "langchain/mcp"], ["Customization (sezione MCP)", D + "deepagents/customization"]],
+      qs: ["Come carico tool da un server MCP e li passo a tools=?", "Come filtro quelli da esporre?"] },
+    { id: "evals", title: "Evals",
+      docs: [["Blog: come costruiamo gli evals", "https://www.langchain.com/blog/how-we-build-evals-for-deep-agents"], ["Models (tabella di valutazione)", D + "deepagents/models"]],
+      note: "Non ho trovato una pagina dedicata nel menu della documentazione.",
+      qs: ["Come misuro se un cambio (prompt, modello, skill) migliora davvero l'agent?"] }
+  ]},
+  { id: "b8", title: "Controllo umano", short: "Controllo umano", topics: [
+    { id: "hitl", title: "Human-in-the-loop",
+      docs: [["Human-in-the-loop", D + "deepagents/human-in-the-loop"]],
+      qs: ["Come uso interrupt_on (approvare, modificare, rifiutare)?", "Perché serve un checkpointer?", "Come lo uso sui tool che scrivono la memoria?"] },
+    { id: "rubrics", title: "Grading rubrics",
+      docs: [["Grading rubrics", D + "deepagents/rubric"]],
+      qs: ["Come definisco i criteri con cui l'agent valuta e corregge il proprio lavoro?"] }
+  ]}
+];
+var FLAT = [];
+BLOCKS.forEach(function (b, bi) { b.topics.forEach(function (t) { t.block = b; t.bi = bi; t.n = FLAT.length + 1; FLAT.push(t); }); });
+var BYID = {}; FLAT.forEach(function (t) { BYID[t.id] = t; });
+
+/* ---------- Spiegazioni degli argomenti ---------- */
+var SPIEGA = {
+  cli: [
+    "La CLI è il modo più rapido per usare un agent senza scrivere codice: apri il terminale, scrivi una richiesta, l'agent ragiona, usa i suoi tool (legge e modifica file, esegue comandi) e ti risponde. Poi puoi continuare la conversazione nella stessa sessione, a ciclo. È lo stesso schema di strumenti come Claude Code.",
+    "Serve per due cose: provare in fretta cosa sa fare un agent di Deep Agents e avere un assistente da riga di comando per il lavoro quotidiano. Per te è anche un buon punto di partenza per capire il ciclo richiesta, tool, risposta prima di costruirlo a mano in Python. Nota: nella documentazione il nome sta cambiando, quindi controlla quale comando esiste nella tua versione."
+  ],
+  modelli: [
+    "Un agent ha bisogno di un modello linguistico, e Deep Agents ti lascia sceglierlo in due modi. Il più semplice è una stringa nel formato provider:modello (per esempio anthropic:claude-sonnet-5-5). Il secondo è passare un modello già costruito, per esempio con init_chat_model, e lì decidi temperatura, limite di token, timeout e i parametri specifici di ogni provider.",
+    "La differenza pratica è il controllo: con la stringa usi i valori predefiniti, con l'istanza configuri tutto. Quello che cambia da un provider all'altro (per esempio come si attiva il ragionamento esteso) va gestito a parte: per questo hai scritto llm_gateway.py. Tieni distinte due cose: la costruzione del modello e il comportamento dell'agent con quel modello (i profili)."
+  ],
+  prompt: [
+    "Il prompt di sistema è il testo che dice all'agent chi è e come deve lavorare. In Deep Agents il prompt finale non è solo quello che scrivi tu: viene composto in ordine da system_prompt (il tuo), poi dal prompt base del profilo e infine da un eventuale suffisso. Ogni middleware (memoria, skill, subagent) aggiunge poi le sue istruzioni.",
+    "AGENTS.md è un file di istruzioni persistenti che l'agent legge come contesto, utile per regole di progetto che cambiano poco. L'HarnessProfile serve invece ad adattare il comportamento dell'agent a un modello o provider specifico (prompt base, suffisso, tool nascosti) senza toccare il codice dell'agent. Regola pratica: ciò che vale sempre sta nel system_prompt, ciò che riguarda il progetto in AGENTS.md, ciò che riguarda il modello nel profilo."
+  ],
+  skill: [
+    "Una skill è una cartella con un file SKILL.md che spiega come svolgere un certo tipo di compito, più eventuali file di supporto. L'agent non carica tutto subito: nel prompt vede soltanto nome e descrizione di ogni skill, e legge il SKILL.md completo (con read_file) solo quando il compito lo richiede. Si chiama divulgazione progressiva ed evita di riempire il contesto.",
+    "Per questo la description è la parte più importante: è ciò che fa scattare la skill al momento giusto. Una raccolta di skill ti permette di insegnare all'agent procedure ripetibili (per esempio come scrivere un report o rivedere codice) senza gonfiare il prompt di sistema."
+  ],
+  memoria: [
+    "Memoria non vuol dire solo passare memory=[\"/AGENTS.md\"]. Quel parametro carica un file nel prompt e dice all'agent di aggiornarlo con edit_file; ma se il backend è quello predefinito, i file vivono nello stato del thread e spariscono al thread successivo. Per avere memoria vera serve un backend persistente, di solito un CompositeBackend che manda il percorso /memories/ a uno StoreBackend collegato a uno store.",
+    "A questo si aggiunge la gestione della conversazione lunga: il SummarizationMiddleware riassume i messaggi vecchi quando superano una soglia, così il contesto non cresce all'infinito. Con «banche dati» intendo database usati per memoria e recupero: cambiare lo store in memoria con uno su disco o su database è ciò che rende la memoria durevole. Il costo da tenere d'occhio è che la memoria entra nel prompt a ogni chiamata."
+  ],
+  tool: [
+    "I tool sono le azioni che l'agent può compiere: leggere e scrivere file, pianificare con una lista di cose da fare, delegare a un subagent e, se glieli dai tu, qualsiasi funzione Python (cercare nel web, interrogare un database, chiamare un'API). Si passano con tools=[...].",
+    "Il punto delicato è che il modello vede solo il nome, la descrizione e i parametri di ogni tool: la docstring che scrivi è quindi il modo in cui gli spieghi quando usarlo. Più tool dai, più il prompt pesa e più l'agent può confondersi, quindi conviene dare solo quelli utili e descriverli bene."
+  ],
+  browser: [
+    "Il browser use permette all'agent di navigare in un sito come farebbe una persona: aprire pagine, leggere il contenuto, cliccare, compilare moduli. Serve quando l'informazione o l'azione non è raggiungibile con una semplice API o con una ricerca.",
+    "Va usato con attenzione: le pagine web possono contenere testo scritto per ingannare l'agent (istruzioni nascoste nei contenuti), e un browser con accesso a un account può compiere azioni reali. Conviene limitare cosa può fare e farsi chiedere conferma sulle azioni importanti."
+  ],
+  backends: [
+    "Il backend decide dove vivono i file che l'agent vede con read_file, write_file ed edit_file. StateBackend li tiene nello stato del thread (si perdono alla fine). FilesystemBackend usa il disco reale. StoreBackend li salva in uno store persistente condiviso tra thread. CompositeBackend combina più backend, indirizzando percorsi diversi a backend diversi.",
+    "È il pezzo che rende possibile la memoria durevole: per esempio tutto quello che sta sotto /memories/ va in uno store persistente, mentre il resto resta temporaneo. Scegliere il backend significa scegliere cosa sopravvive e cosa può toccare l'agent."
+  ],
+  permissions: [
+    "Le permissions limitano dove l'agent può leggere e scrivere, tramite il parametro permissions. Servono a mettere dei confini: per esempio consentire la lettura di tutto il progetto ma la scrittura solo in una cartella di lavoro, o impedire di toccare certi percorsi.",
+    "Sono importanti quando l'agent ha accesso a file reali o a una memoria scrivibile: riducono il danno di un errore del modello o di un'istruzione ingannevole. Vanno pensate insieme ai backend, perché agiscono sui percorsi che i backend espongono."
+  ],
+  multimodal: [
+    "Multimodale significa che l'agent può ricevere e produrre non solo testo ma anche altri tipi di contenuto, per esempio immagini o documenti. Cosa è davvero possibile dipende dal modello scelto e dai tipi di file supportati.",
+    "Per studiarlo conviene capire tre cose: quali formati accetta l'agent in ingresso, con quali modelli funziona e cosa succede quando un contenuto non è supportato (viene scartato, convertito o dà errore)."
+  ],
+  subagents: [
+    "Un subagent è un agent specializzato a cui l'agent principale delega un compito, tramite il tool task. Lavora in un contesto isolato: legge e scrive per conto suo e restituisce al principale solo il risultato finale, senza riempire il suo contesto con tutti i passaggi intermedi.",
+    "Si definiscono con nome, description, system prompt, tool e, se vuoi, un modello diverso (per esempio uno più economico per le ricerche). La description è ciò che permette all'agent principale di decidere quando delegare. Sono utili per compiti lunghi o rumorosi che sporcherebbero il contesto principale."
+  ],
+  dynamic: [
+    "I subagent normali li dichiari in anticipo nel codice. Quelli dinamici, ancora in beta, vengono invece creati dall'agent durante l'esecuzione, in base a ciò che serve in quel momento.",
+    "Sono interessanti quando non sai in anticipo quali specialisti serviranno. In contropartita hai meno prevedibilità e controllo, quindi conviene capire bene i limiti prima di usarli."
+  ],
+  async: [
+    "I subagent asincroni lavorano in parallelo e in background: l'agent principale li avvia, continua a fare altro e recupera i risultati quando sono pronti, invece di restare in attesa di ognuno.",
+    "Sono utili quando ci sono più compiti indipendenti (per esempio cercare informazioni su più fonti) e vuoi ridurre i tempi. Va chiarito come si leggono i risultati e come si sommano costi e metriche delle varie esecuzioni."
+  ],
+  streaming: [
+    "Lo streaming ti permette di ricevere l'output dell'agent mentre viene prodotto, invece di aspettare la fine. È ciò che fa comparire il testo parola per parola in una chat e mostra i passaggi intermedi (chiamate ai tool, risultati).",
+    "Esistono più modalità di streaming (per esempio gli aggiornamenti dello stato del grafo, i messaggi, i token). Per studiarlo conviene capire cosa arriva in ciascuna, perché dipende da cosa vuoi mostrare all'utente."
+  ],
+  events: [
+    "L'event streaming, ancora in beta, espone l'esecuzione dell'agent come un flusso di eventi tipizzati: inizio e fine delle chiamate al modello, uso dei tool, attività dei subagent.",
+    "Serve soprattutto per costruire interfacce o strumenti di monitoraggio che mostrano cosa sta facendo l'agent in tempo reale, con più struttura rispetto al semplice testo in streaming."
+  ],
+  callbacks: [
+    "I callback sono funzioni che LangChain chiama in momenti precisi (inizio e fine di una chiamata al modello, di un tool, un errore, un nuovo token). Osservano soltanto: non cambiano il comportamento dell'agent. È la strada per misurare tempi, token e costi, come fa il tuo llm_gateway.py.",
+    "La differenza con i middleware è proprio questa: i callback guardano, i middleware possono modificare richieste, risposte e flusso. Nella documentazione di Deep Agents non ho trovato una pagina dedicata, quindi la fonte è quella di LangChain."
+  ],
+  prebuilt: [
+    "Un middleware è un pezzo di codice che si inserisce nel ciclo dell'agent per aggiungere capacità o regole senza riscrivere l'agent. Deep Agents ne usa già diversi per pianificazione, file, subagent, memoria, skill e riassunto, e LangChain ne offre altri pronti, per esempio per riprovare le chiamate che falliscono, passare a un modello di riserva, nascondere dati personali o chiedere approvazione umana.",
+    "Studiarli serve a sapere cosa c'è già prima di scrivere qualcosa di tuo, e a capire l'ordine in cui lo stack viene applicato, perché l'ordine cambia il risultato."
+  ],
+  custom: [
+    "Un middleware personalizzato ti permette di intervenire nel ciclo dell'agent con punti di aggancio precisi: prima o dopo l'agent, prima o dopo il modello, e attorno a ogni chiamata al modello (wrap_model_call) o a un tool (wrap_tool_call). Con questi puoi, per esempio, modificare il prompt, filtrare i tool disponibili, bloccare un'azione o registrare dati.",
+    "Una regola importante: il middleware non deve salvare dati modificabili in self durante l'esecuzione, perché può essere usato da più esecuzioni insieme. Ciò che va ricordato si mette nello stato del grafo."
+  ],
+  context: [
+    "Il context engineering è il lavoro di decidere cosa entra nel contesto del modello a ogni chiamata: prompt di sistema, descrizioni dei tool, memoria, skill, storico dei messaggi, risultati dei tool. Un contesto troppo grande costa di più, rallenta e fa peggiorare le risposte.",
+    "Gli strumenti per controllarlo sono quelli già visti: memoria e skill caricate solo quando servono, riassunto automatico, subagent con contesto isolato. E lo misuri guardando quanti token consuma ogni chiamata, che è ciò che il tuo gateway già riporta."
+  ],
+  sandboxes: [
+    "Una sandbox è un ambiente isolato in cui l'agent può eseguire codice e comandi senza toccare la tua macchina. Come backend, gli dà un filesystem proprio e un tool per eseguire comandi.",
+    "È la scelta giusta quando l'agent deve lanciare codice generato da lui o lavorare con dipendenze e file che non vuoi sul tuo computer. Esistono diversi provider, e la scelta dipende da costi, tempi di avvio e integrazione."
+  ],
+  interpreters: [
+    "Gli interpreter, in beta, danno all'agent un modo di eseguire codice in un ambiente controllato: nella documentazione c'è un tool eval che esegue JavaScript dentro un interprete isolato (QuickJS).",
+    "Servono per calcoli e trasformazioni di dati che il modello farebbe male da solo, con meno rischi e meno peso di una sandbox completa. Verifica nella tua versione cosa è disponibile e con quali limiti."
+  ],
+  mcp: [
+    "MCP (Model Context Protocol) è uno standard per collegare un agent a strumenti e fonti di dati esterni: un server MCP espone dei tool (per esempio un database, un calendario, un servizio) e il client li rende disponibili all'agent.",
+    "In pratica carichi i tool da un server MCP con gli adapter di LangChain e li passi a tools=[...] come qualsiasi altro tool. Conviene filtrare quelli che esponi, perché ogni tool in più appesantisce il contesto e allarga ciò che l'agent può fare."
+  ],
+  evals: [
+    "Gli evals sono test automatici per l'agent: un insieme di casi con un risultato atteso, che esegui ogni volta che cambi qualcosa (prompt, modello, skill, tool) per vedere se la qualità migliora o peggiora davvero, invece di fidarti di qualche prova a mano.",
+    "Nella documentazione non c'è una pagina dedicata; il riferimento migliore è il blog di LangChain su come costruiscono gli evals per Deep Agents. Il punto da imparare è come scegliere i casi e cosa misurare (correttezza, tool usati, costi)."
+  ],
+  hitl: [
+    "Human-in-the-loop significa che l'agent si ferma e chiede il tuo permesso prima di eseguire certe azioni. Con interrupt_on indichi quali tool richiedono approvazione; quando l'agent ne chiama uno, l'esecuzione si interrompe e tu puoi approvare, modificare gli argomenti o rifiutare.",
+    "Per riprendere l'esecuzione serve un checkpointer, che salva lo stato mentre aspetti. È il meccanismo giusto per azioni rischiose o irreversibili, come cancellare file, inviare messaggi o scrivere nella memoria."
+  ],
+  rubrics: [
+    "Una rubrica di valutazione è un elenco di criteri con cui giudicare un risultato (per esempio completezza, correttezza, tono). Con le grading rubrics l'agent può usarla per valutare e migliorare il proprio lavoro prima di darlo come finito.",
+    "Serve quando il risultato non si controlla con un semplice vero o falso: definire bene i criteri è ciò che rende la valutazione utile e ripetibile."
+  ]
+};
+FLAT.forEach(function (t) { t.sp = SPIEGA[t.id] || []; });
+
+
+/* ---------- Stato ---------- */
+var state = { topics: {}, log: [] };   // topics[id] = {s, q:[indici], n, d}
+var ui = { view: "home", sel: null, filter: "all", query: "", logFilter: "all", collapsed: {} };
+var $ = function (id) { return document.getElementById(id); };
+function clone(x) { return JSON.parse(JSON.stringify(x)); }
+function pad(n) { return String(n).padStart(2, "0"); }
+function today() { var d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+function fmtDate(iso) { var p = String(iso).split("-"); return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : iso; }
+function ts(id) { return state.topics[id] || (state.topics[id] = { s: "todo", q: [], n: "", d: "" }); }
+function sameJSON(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+function restart(e, c) { if (!e) return; e.classList.remove(c); void e.offsetWidth; e.classList.add(c); }
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function openDoubts() { return state.log.filter(function (e) { return e.doubt && !e.resolved; }); }
+function nextTopic() { return FLAT.find(function (t) { return ts(t.id).s === "doing"; }) || FLAT.find(function (t) { return ts(t.id).s !== "done"; }) || null; }
+
+/* ---------- Salvataggio: db per-persona, con ripiego locale ---------- */
+var mode = "local", progRef = null, logRef = null;
+var dirtyP = false, dirtyL = false, flushing = false, timer = null;
+function setSave(kind, text) { $("dot").className = "dot " + kind; $("savetxt").textContent = text; }
+function localSave() { try { localStorage.setItem("studio-deep-agents-v3", JSON.stringify(state)); return true; } catch (e) { return false; } }
+function localLoad() { try { var r = localStorage.getItem("studio-deep-agents-v3"); if (r) { var s = JSON.parse(r); if (s && s.topics) { state.topics = s.topics; state.log = s.log || []; } } } catch (e) {} }
+function schedule() { dirtyP = true; setSave("busy", "Salvataggio…"); clearTimeout(timer); timer = setTimeout(flush, 600); }
+function scheduleLog() { dirtyL = true; setSave("busy", "Salvataggio…"); clearTimeout(timer); timer = setTimeout(flush, 250); }
+async function flush() {
+  if (flushing) { timer = setTimeout(flush, 300); return; }
+  flushing = true;
+  try {
+    if (mode === "db") {
+      if (dirtyP) { dirtyP = false; await progRef.set({ topics: clone(state.topics) }); }
+      if (dirtyL) { dirtyL = false; await logRef.set({ entries: clone(state.log) }); }
+      setSave("ok", "Salvato nel tuo spazio privato");
+    } else {
+      dirtyP = dirtyL = false;
+      var ok = localSave();
+      setSave(ok ? "ok" : "bad", ok ? "Salvato solo in questo browser" : "Salvataggio non disponibile");
+    }
+  } catch (e) {
+    dirtyP = true; dirtyL = true; localSave();
+    setSave("bad", "Salvataggio non riuscito: riprovo alla prossima modifica");
+  } finally { flushing = false; }
+}
+
+/* ---------- Viste e navigazione ---------- */
+function setHash(h) { try { if (location.hash !== "#" + h) history.replaceState(null, "", "#" + h); } catch (e) { try { location.hash = h; } catch (e2) {} } }
+function setView(v) {
+  ui.view = v;
+  ["home", "path", "log"].forEach(function (k) { $("v-" + k).hidden = k !== v; });
+  Array.prototype.forEach.call(document.querySelectorAll(".tabs button"), function (b) { b.setAttribute("aria-selected", String(b.dataset.view === v)); });
+  restart($("v-" + v), "enter");
+  if (v === "path") { if (!ui.sel) ui.sel = (nextTopic() || FLAT[0]).id; refreshAll(); }
+  setHash(v === "path" && ui.sel ? "percorso-" + ui.sel : { home: "panoramica", path: "percorso", log: "registro" }[v]);
+}
+function selectTopic(id, opts) {
+  opts = opts || {};
+  ui.sel = id;
+  var t = BYID[id]; ui.collapsed[t.block.id] = false;
+  $("pr").classList.add("open");
+  if (ui.view !== "path") setView("path"); else { setHash("percorso-" + id); }
+  refreshAll();
+  var row = rows[id]; if (row && !row.hidden) row.scrollIntoView({ block: "nearest" });
+  if (opts.top) $("dBody").scrollTop = 0;
+}
+function stepTopic(delta, visibleOnly) {
+  var list = visibleOnly ? FLAT.filter(function (t) { return !rows[t.id].hidden; }) : FLAT;
+  var i = list.findIndex(function (t) { return t.id === ui.sel; });
+  if (i === -1) { if (list.length) selectTopic(list[0].id, { top: true }); return; }
+  var j = i + delta; if (j < 0 || j >= list.length) return;
+  selectTopic(list[j].id, { top: true });
+}
+
+/* ---------- Elenco ---------- */
+var rows = {}, groups = {};
+function buildList() {
+  var host = $("list"), idx = 0;
+  BLOCKS.forEach(function (b, bi) {
+    var gh = el("button", "gh"); gh.type = "button"; gh.setAttribute("aria-expanded", "true");
+    var ar = el("span", "ar", "▾");
+    var gt = el("span", "gt"); gt.appendChild(el("small", null, pad(bi + 1))); gt.appendChild(document.createTextNode(b.title));
+    var gc = el("span", "lab");
+    var bar = el("span", "bar2"); var fill = document.createElement("i"); bar.appendChild(fill);
+    gh.appendChild(ar); gh.appendChild(gt); gh.appendChild(gc); gh.appendChild(bar);
+    gh.addEventListener("click", function () { ui.collapsed[b.id] = !ui.collapsed[b.id]; applyFilters(); });
+    gh.style.setProperty("--i", idx++); host.appendChild(gh);
+    groups[b.id] = { gh: gh, ar: ar, gc: gc, fill: fill };
+    b.topics.forEach(function (t) {
+      var r = el("button", "row"); r.type = "button"; r.dataset.s = "todo";
+      r.appendChild(el("span", "rn", pad(t.n)));
+      r.appendChild(el("span", "rt", t.title));
+      var mk = el("span", "mk"); mk.dataset.s = "todo"; r.appendChild(mk);
+      r.addEventListener("click", function () { selectTopic(t.id, { top: true }); });
+      r.style.setProperty("--i", idx++); host.appendChild(r); rows[t.id] = r; r._mk = mk;
+    });
+  });
+  host.appendChild(el("div", "none", "Nessun argomento corrisponde alla ricerca.")); host.lastChild.id = "noRes"; host.lastChild.hidden = true;
+  var sel = $("logTopic");
+  FLAT.forEach(function (t) { var o = el("option", null, pad(t.n) + " · " + t.title); o.value = t.id; sel.appendChild(o); });
+  var gen = el("option", null, "Generale"); gen.value = ""; sel.insertBefore(gen, sel.firstChild); sel.value = "";
+  $("eyeCount").textContent = FLAT.length;
+  var d = new Date(); $("capDate").textContent = d.getFullYear() + "." + pad(d.getMonth() + 1);
+}
+function refreshList() {
+  FLAT.forEach(function (t) {
+    var r = rows[t.id], s = ts(t.id).s; r.dataset.s = s; r._mk.dataset.s = s;
+    if (t.id === ui.sel) r.setAttribute("aria-current", "true"); else r.removeAttribute("aria-current");
+  });
+  BLOCKS.forEach(function (b) {
+    var d = b.topics.filter(function (t) { return ts(t.id).s === "done"; }).length;
+    groups[b.id].gc.textContent = d + " / " + b.topics.length;
+    groups[b.id].fill.style.width = (d / b.topics.length * 100) + "%";
+  });
+}
+function applyFilters() {
+  var q = ui.query.trim().toLowerCase(), any = false;
+  BLOCKS.forEach(function (b) {
+    var shown = 0, g = groups[b.id], col = !!ui.collapsed[b.id] && !q && ui.filter === "all";
+    b.topics.forEach(function (t) {
+      var okS = ui.filter === "all" || ts(t.id).s === ui.filter;
+      var okQ = !q || (t.title + " " + t.qs.join(" ") + " " + (ts(t.id).n || "")).toLowerCase().indexOf(q) !== -1;
+      var ok = okS && okQ; if (ok) shown++;
+      rows[t.id].hidden = !ok || col;
+    });
+    g.gh.hidden = shown === 0; g.ar.textContent = col ? "▸" : "▾"; g.gh.setAttribute("aria-expanded", String(!col));
+    if (shown) any = true;
+  });
+  $("noRes").hidden = any;
+}
+
+/* ---------- Dettaglio ---------- */
+var lastShown = null;
+function fillDetail() {
+  var t = BYID[ui.sel]; if (!t) return;
+  var st = ts(t.id);
+  if (lastShown !== t.id) { lastShown = t.id; restart($("dBody"), "swap"); restart($("dTitle"), "swap1"); }
+  $("dCrumb").textContent = "Blocco " + pad(t.bi + 1) + " · " + t.block.short + "  /  Argomento " + pad(t.n) + " di " + FLAT.length;
+  $("dTitle").textContent = t.title;
+  Array.prototype.forEach.call($("dSeg").children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === st.s)); });
+  var docs = $("dDocs"); docs.textContent = "";
+  if (t.docs.length) t.docs.forEach(function (d) { var a = el("a", null, d[0]); a.href = d[1]; a.target = "_blank"; a.rel = "noopener"; docs.appendChild(a); });
+  else docs.appendChild(el("span", "dash", "da cercare"));
+  var sp = $("dSp"); sp.textContent = "";
+  t.sp.forEach(function (par) { sp.appendChild(el("p", null, par)); });
+  var nt = $("dNote"); nt.hidden = !t.note; nt.textContent = t.note || "";
+  var qs = $("dQs"); qs.textContent = "";
+  t.qs.forEach(function (q, i) {
+    var li = el("li"), lb = el("label"), cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = st.q.indexOf(i) !== -1;
+    var id = t.id; cb.addEventListener("change", function () { toggleQ(id, i, cb.checked); });
+    lb.appendChild(cb); lb.appendChild(el("span", null, q)); li.appendChild(lb); qs.appendChild(li);
+  });
+  qCount();
+  var na = $("dNotes"); if (document.activeElement !== na || na.dataset.id !== t.id) na.value = st.n; na.dataset.id = t.id;
+  var dd = $("dDone"); dd.hidden = !(st.s === "done" && st.d); dd.textContent = st.d ? "Completato il " + fmtDate(st.d) : "";
+  var i = FLAT.indexOf(t); $("prev").disabled = i === 0; $("next").disabled = i === FLAT.length - 1;
+  $("doneNext").textContent = st.s === "done" ? (i === FLAT.length - 1 ? "Ultimo argomento" : "Già fatto, vai avanti") : (i === FLAT.length - 1 ? "Segna come fatto" : "Fatto, vai avanti");
+}
+function qCount() {
+  var t = BYID[ui.sel], st = ts(t.id);
+  $("dQLab").textContent = "Cosa voglio capire · " + st.q.length + " / " + t.qs.length;
+}
+function toggleQ(id, i, on) {
+  var st = ts(id), set = new Set(st.q); if (on) set.add(i); else set.delete(i);
+  st.q = Array.from(set).sort(function (a, b) { return a - b; }); qCount(); schedule();
+}
+function setStatus(id, s) {
+  var st = ts(id); if (st.s === s) return;
+  st.s = s; st.d = s === "done" ? today() : "";
+  refreshAll(); schedule();
+  if (s === "done" && rows[id]) restart(rows[id]._mk, "pop");
+}
+
+/* ---------- Pila isometrica: un piano per blocco, cliccabile ---------- */
+var NS = "http://www.w3.org/2000/svg";
+function sv(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+var stackAnimated = false;
+function drawStack(fr, cnt) {
+  var svg = $("stack"); svg.textContent = "";
+  var cx = 280, baseCy = 432, hw = 104, hh = 52, th = 15, step = 52, INK = "#1b1a17", SAND = "#f3eee4", EDGE = "#d3ccbc", ACC = "#c8461a", LINE = "#8f887a";
+  var defs = sv("defs", {}, svg);
+  sv("ellipse", { cx: cx, cy: baseCy + hh + th + 22, rx: 168, ry: 17, fill: "#d9d2c4" }, svg);
+  BLOCKS.forEach(function (b, i) {
+    var f = fr[i], cy = baseCy - i * step;
+    [["g", EDGE], ["h", "#b9b2a3"]].forEach(function (p) {
+      var g = sv("linearGradient", { id: p[0] + i, gradientUnits: "userSpaceOnUse", x1: cx - hw, y1: 0, x2: cx + hw, y2: 0 }, defs);
+      [[0, ACC], [f, ACC], [f, p[1]], [1, p[1]]].forEach(function (s) { sv("stop", { offset: s[0], "stop-color": s[1] }, g); });
+    });
+    var grp = sv("g", { "class": stackAnimated ? "" : "slab", "data-b": i, tabindex: 0, role: "button", "aria-label": "Apri il blocco " + b.title + ", " + cnt[i] }, svg);
+    sv("polygon", { points: (cx - hw) + "," + cy + " " + cx + "," + (cy + hh) + " " + cx + "," + (cy + hh + th) + " " + (cx - hw) + "," + (cy + th), fill: "url(#g" + i + ")", stroke: INK, "stroke-linejoin": "round" }, grp);
+    sv("polygon", { points: cx + "," + (cy + hh) + " " + (cx + hw) + "," + cy + " " + (cx + hw) + "," + (cy + th) + " " + cx + "," + (cy + hh + th), fill: "url(#h" + i + ")", stroke: INK, "stroke-linejoin": "round" }, grp);
+    sv("polygon", { class: "face", points: cx + "," + (cy - hh) + " " + (cx + hw) + "," + cy + " " + cx + "," + (cy + hh) + " " + (cx - hw) + "," + cy, fill: f >= 1 ? ACC : SAND, stroke: INK, "stroke-linejoin": "round" }, grp);
+    sv("line", { x1: cx - hw / 2, y1: cy - hh / 2, x2: cx + hw / 2, y2: cy + hh / 2, stroke: f >= 1 ? "#f0b79c" : EDGE }, grp);
+    sv("line", { x1: cx + hw / 2, y1: cy - hh / 2, x2: cx - hw / 2, y2: cy + hh / 2, stroke: f >= 1 ? "#f0b79c" : EDGE }, grp);
+    var right = i % 2 === 0, y = cy + th / 2 + 2, x0 = right ? cx + hw : cx - hw, x1 = right ? x0 + 46 : x0 - 46;
+    sv("line", { x1: x0 + (right ? 4 : -4), y1: y, x2: x1, y2: y, stroke: LINE, "stroke-dasharray": "2 3" }, grp);
+    sv("polygon", { points: (right ? x1 + 5 : x1 - 5) + "," + y + " " + x1 + "," + (y - 2.5) + " " + x1 + "," + (y + 2.5), fill: LINE }, grp);
+    var tx = right ? x1 + 11 : x1 - 11, anchor = right ? "start" : "end";
+    var t = sv("text", { x: tx, y: y - 3, "text-anchor": anchor, "font-family": "IBM Plex Mono, monospace", "font-size": 10.5, fill: INK }, grp); t.textContent = pad(i + 1) + "  " + b.short;
+    var t2 = sv("text", { x: tx, y: y + 9, "text-anchor": anchor, "font-family": "IBM Plex Mono, monospace", "font-size": 9.5, fill: f > 0 ? ACC : "#6a645a", "letter-spacing": ".08em" }, grp); t2.textContent = cnt[i];
+    var open = function () { var bl = BLOCKS[i]; var tp = bl.topics.find(function (x) { return ts(x.id).s !== "done"; }) || bl.topics[0]; selectTopic(tp.id, { top: true }); };
+    if (!stackAnimated) grp.style.animationDelay = (i * 70 + 250) + "ms";
+    grp.addEventListener("click", open);
+    grp.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); } });
+  });
+  stackAnimated = true;
+}
+
+/* ---------- Riepilogo ---------- */
+function updateSummary() {
+  var done = 0, doing = 0, total = FLAT.length, fr = [], cnt = [], stage = null;
+  FLAT.forEach(function (t) { var s = ts(t.id).s; if (s === "done") done++; else if (s === "doing") doing++; });
+  BLOCKS.forEach(function (b, bi) {
+    var d = b.topics.filter(function (t) { return ts(t.id).s === "done"; }).length, n = b.topics.length;
+    fr.push(d / n); cnt.push(d + " / " + n);
+    if (!stage && d < n) stage = "Blocco " + pad(bi + 1) + " · " + b.short;
+  });
+  drawStack(fr, cnt);
+  var open = openDoubts().length;
+  $("kvStage").textContent = stage || "Completato";
+  $("kvDone").textContent = done + " / " + total;
+  $("kvDoing").textContent = String(doing);
+  $("kvDoubt").textContent = String(open);
+  $("bdLog").textContent = open ? String(open) : "";
+  $("hdrState").textContent = done === total ? "Completato" : (done + doing === 0 ? "Da iniziare" : done + " / " + total + " fatti");
+  var nx = nextTopic();
+  if (nx) { $("kvNext").textContent = pad(nx.n) + " " + nx.title; $("nextGo").hidden = false; $("nextGo").textContent = (ts(nx.id).s === "doing" ? "Riprendi: " : "Inizia: ") + nx.title; }
+  else { $("kvNext").textContent = "—"; $("nextGo").hidden = true; }
+}
+
+/* ---------- Registro ---------- */
+var openEnt = {};
+function entTitle(e) { return e.title || (e.did || "").split("\n")[0].slice(0, 60) || "Senza titolo"; }
+function entryEl(e, showTopic) {
+  var r = el("div", "ent");
+  var open = !!openEnt[e.id];
+  var h = el("button", "eh"); h.type = "button"; h.setAttribute("aria-expanded", String(open));
+  h.appendChild(el("span", "d", fmtDate(e.date)));
+  var tt = el("span", "et", entTitle(e));
+  if (showTopic) tt.appendChild(el("small", null, e.topic && BYID[e.topic] ? pad(BYID[e.topic].n) : "Generale"));
+  h.appendChild(tt);
+  h.appendChild(e.doubt && !e.resolved ? el("span", "dbt", "dubbio") : el("span"));
+  var ar = el("span", "ar", open ? "▾" : "▸"); h.appendChild(ar);
+  var body = el("div", "eb"); body.hidden = !open;
+  if (e.did) body.appendChild(el("div", "did", e.did)); else body.appendChild(el("div", "nodesc", "Nessuna descrizione."));
+  if (e.doubt) {
+    var w = el("label", "chk" + (e.resolved ? " res" : "")); var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!e.resolved; cb.title = "Segna come risolto";
+    cb.addEventListener("change", function () { e.resolved = cb.checked; renderLog(); updateSummary(); scheduleLog(); });
+    w.appendChild(cb); w.appendChild(el("span", null, "Dubbio: " + e.doubt)); body.appendChild(w);
+  }
+  var ac = el("div", "acts2");
+  if (showTopic && e.topic && BYID[e.topic]) { var tb = el("button", "tp", "Apri argomento: " + BYID[e.topic].title); tb.type = "button"; tb.addEventListener("click", function () { selectTopic(e.topic, { top: true }); }); ac.appendChild(tb); }
+  var x = el("button", "x", "Elimina"); x.type = "button"; x.setAttribute("aria-label", "Elimina la voce " + entTitle(e));
+  x.addEventListener("click", function () { delete openEnt[e.id]; state.log = state.log.filter(function (y) { return y.id !== e.id; }); renderLog(); updateSummary(); scheduleLog(); });
+  ac.appendChild(x); body.appendChild(ac);
+  h.addEventListener("click", function () { openEnt[e.id] = !openEnt[e.id]; body.hidden = !openEnt[e.id]; h.setAttribute("aria-expanded", String(!!openEnt[e.id])); ar.textContent = openEnt[e.id] ? "▾" : "▸"; });
+  r.appendChild(h); r.appendChild(body);
+  return r;
+}
+function sortedLog(arr) { return arr.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.id < b.id ? 1 : -1); }); }
+function renderLog() {
+  var list = $("logList"); list.textContent = "";
+  var all = sortedLog(state.log);
+  var rowsL = ui.logFilter === "open" ? all.filter(function (e) { return e.doubt && !e.resolved; }) : all;
+  rowsL.forEach(function (e) { list.appendChild(entryEl(e, true)); });
+  if (!rowsL.length) list.appendChild(el("div", "none", ui.logFilter === "open" ? "Nessun dubbio aperto." : "Ancora nessuna voce. La prima la scrivi a sinistra."));
+  $("logCount").textContent = state.log.length ? state.log.length + (state.log.length === 1 ? " voce" : " voci") : "";
+  renderTopicLog();
+}
+function renderTopicLog() {
+  if (!ui.sel) return;
+  var host = $("dLog"); host.textContent = "";
+  var mine = sortedLog(state.log.filter(function (e) { return e.topic === ui.sel; }));
+  var open = mine.filter(function (e) { return e.doubt && !e.resolved; }).length;
+  $("dLogLab").textContent = "Registro di questo argomento · " + mine.length + (open ? " · " + open + (open === 1 ? " dubbio aperto" : " dubbi aperti") : "");
+  mine.forEach(function (e) { host.appendChild(entryEl(e, false)); });
+  if (!mine.length) host.appendChild(el("div", "none", "Nessuna voce ancora. Usa «Scrivi nel registro» qui sotto per aggiungerne una."));
+}
+
+/* ---------- Esporta in Markdown ---------- */
+function toMarkdown() {
+  var L = ["# Studio di Deep Agents: percorso e appunti", "", "Versione di riferimento: `deepagents 0.7.40`. Esportato il " + fmtDate(today()) + ".", ""];
+  var done = FLAT.filter(function (t) { return ts(t.id).s === "done"; }).length;
+  L.push("Avanzamento: " + done + " di " + FLAT.length + " argomenti fatti.", "");
+  BLOCKS.forEach(function (b, bi) {
+    L.push("## Blocco " + (bi + 1) + ": " + b.title, "");
+    b.topics.forEach(function (t) {
+      var st = ts(t.id), lab = { todo: "da fare", doing: "in corso", done: "fatto" }[st.s];
+      L.push("### " + (bi + 1) + "." + (b.topics.indexOf(t) + 1) + " " + t.title);
+      L.push("- [" + (st.s === "done" ? "x" : " ") + "] Studiato (" + lab + (st.d ? ", " + fmtDate(st.d) : "") + ")");
+      if (t.docs.length) L.push("- **Doc:** " + t.docs.map(function (d) { return "[" + d[0] + "](" + d[1] + ")"; }).join(", "));
+      L.push("- **Cosa voglio capire:**");
+      t.qs.forEach(function (q, i) { L.push("  - [" + (st.q.indexOf(i) !== -1 ? "x" : " ") + "] " + q); });
+      L.push("- **Appunti:**");
+      if (st.n) st.n.split("\n").forEach(function (l) { L.push("  " + l); });
+      L.push("");
+    });
+  });
+  L.push("## Registro dello studio", "", "| Data | Argomento | Titolo | Descrizione | Dubbi aperti |", "|---|---|---|---|---|");
+  var cell = function (s) { return String(s || "").replace(/\|/g, "\\|").replace(/\n/g, " "); };
+  state.log.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).forEach(function (e) {
+    L.push("| " + fmtDate(e.date) + " | " + cell(e.topic && BYID[e.topic] ? BYID[e.topic].title : "Generale") + " | " + cell(entTitle(e)) + " | " + cell(e.did) + " | " + cell(e.doubt ? (e.resolved ? "(risolto) " : "") + e.doubt : "") + " |");
+  });
+  return L.join("\n") + "\n";
+}
+function openMd() { $("mdText").value = toMarkdown(); $("mdMsg").textContent = ""; $("mdOverlay").hidden = false; $("mdText").focus(); }
+
+/* ---------- Aggiornamento complessivo ---------- */
+function refreshAll() { refreshList(); applyFilters(); if (ui.sel) fillDetail(); updateSummary(); renderLog(); }
+
+/* ---------- Eventi ---------- */
+Array.prototype.forEach.call(document.querySelectorAll(".tabs button"), function (b) { b.addEventListener("click", function () { setView(b.dataset.view); }); });
+Array.prototype.forEach.call(document.querySelectorAll("[data-view-go]"), function (b) { b.addEventListener("click", function () { setView(b.dataset.viewGo); }); });
+$("nextGo").addEventListener("click", function () { var nx = nextTopic(); if (nx) selectTopic(nx.id, { top: true }); });
+$("mdBtn").addEventListener("click", openMd);
+$("filters").addEventListener("click", function (ev) {
+  var b = ev.target.closest("button"); if (!b) return; ui.filter = b.dataset.f;
+  Array.prototype.forEach.call($("filters").children, function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+  applyFilters();
+});
+$("search").addEventListener("input", function (ev) { ui.query = ev.target.value; applyFilters(); });
+$("dSeg").addEventListener("click", function (ev) { var b = ev.target.closest("button"); if (b && ui.sel) setStatus(ui.sel, b.dataset.v); });
+$("dNotes").addEventListener("input", function (ev) { var id = ev.target.dataset.id; if (!id) return; ts(id).n = ev.target.value; schedule(); });
+$("prev").addEventListener("click", function () { stepTopic(-1, false); });
+$("next").addEventListener("click", function () { stepTopic(1, false); });
+$("back").addEventListener("click", function () { $("pr").classList.remove("open"); });
+$("doneNext").addEventListener("click", function () {
+  var id = ui.sel; if (!id) return;
+  if (ts(id).s !== "done") setStatus(id, "done");
+  var i = FLAT.findIndex(function (t) { return t.id === id; });
+  var nx = FLAT.slice(i + 1).find(function (t) { return ts(t.id).s !== "done"; }) || FLAT[i + 1];
+  if (nx) selectTopic(nx.id, { top: true });
+});
+$("toLog").addEventListener("click", function () { var id = ui.sel; setView("log"); $("logTopic").value = id || ""; $("logTitle").focus(); });
+$("logFilters").addEventListener("click", function (ev) {
+  var b = ev.target.closest("button"); if (!b) return; ui.logFilter = b.dataset.lf;
+  Array.prototype.forEach.call($("logFilters").children, function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+  renderLog();
+});
+$("logForm").addEventListener("submit", function (ev) {
+  ev.preventDefault();
+  var title = $("logTitle").value.trim(); if (!title) return;
+  state.log.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date: $("logDate").value || today(), topic: $("logTopic").value, title: title, did: $("logDid").value.trim(), doubt: $("logDoubt").value.trim(), resolved: false });
+  $("logTitle").value = ""; $("logDid").value = ""; $("logDoubt").value = ""; $("logDate").value = today();
+  renderLog(); updateSummary(); scheduleLog();
+});
+$("mdClose").addEventListener("click", function () { $("mdOverlay").hidden = true; });
+$("mdOverlay").addEventListener("click", function (ev) { if (ev.target === $("mdOverlay")) $("mdOverlay").hidden = true; });
+$("mdCopy").addEventListener("click", function () {
+  var ta = $("mdText"), msg = $("mdMsg");
+  function manual() { ta.focus(); ta.select(); msg.textContent = "Testo selezionato: premi Ctrl+C (o Cmd+C)"; }
+  try { navigator.clipboard.writeText(ta.value).then(function () { msg.textContent = "Copiato"; }, manual); } catch (e) { manual(); }
+});
+document.addEventListener("keydown", function (ev) {
+  if (ev.key === "Escape") { $("mdOverlay").hidden = true; return; }
+  var tag = (ev.target && ev.target.tagName) || "";
+  if (ui.view !== "path" || /INPUT|TEXTAREA|SELECT/.test(tag) || ev.metaKey || ev.ctrlKey || ev.altKey || !$("mdOverlay").hidden) return;
+  if (ev.key === "ArrowDown" || ev.key === "j") { ev.preventDefault(); stepTopic(1, true); }
+  else if (ev.key === "ArrowUp" || ev.key === "k") { ev.preventDefault(); stepTopic(-1, true); }
+});
+window.addEventListener("hashchange", routeFromHash);
+function routeFromHash() {
+  var h = (location.hash || "").replace("#", "");
+  if (h.indexOf("percorso-") === 0 && BYID[h.slice(9)]) { ui.sel = h.slice(9); setView("path"); }
+  else if (h === "percorso") setView("path");
+  else if (h === "registro") setView("log");
+  else if (h === "panoramica") setView("home");
+}
+
+/* ---------- Avvio ---------- */
+buildList();
+$("logDate").value = today();
+localLoad();
+ui.sel = (nextTopic() || FLAT[0]).id;
+refreshAll();
+routeFromHash();
+setSave("busy", "Collegamento al salvataggio…");
+setTimeout(function () { $("v-home").classList.remove("intro"); $("list").classList.remove("intro"); }, 1800);
+
+(async function init() {
+  var fallback = function (why) {
+    mode = "local";
+    $("banner").hidden = false; $("banner").textContent = why;
+    var ok = localSave();
+    setSave(ok ? "ok" : "bad", ok ? "Salvato solo in questo browser" : "Salvataggio non disponibile");
+  };
+  try {
+    if (!window.claude || !window.claude.use) return fallback("Salvataggio nel tuo spazio non disponibile qui");
+    var res = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+    var db = res[0], user = res[1];
+    var uid = user ? await user.id() : null;
+    if (!db || !uid) return fallback("Accedi per salvare nel tuo spazio privato");
+    var userCol = db.collection("data/users/" + uid);
+    progRef = userCol.doc("progress"); logRef = userCol.doc("log");
+    mode = "db";
+    var guard = setTimeout(function () { setSave("bad", "Il salvataggio non risponde ancora: i dati potrebbero non essere aggiornati"); }, 10000);
+    var onErr = function () { clearTimeout(guard); setSave("bad", "Impossibile leggere i dati salvati"); };
+    progRef.onSnapshot(function (s) {
+      if (!s.metadata.fromCache) clearTimeout(guard);
+      if (dirtyP || flushing) return;
+      if (s.exists) {
+        var remote = (s.data() || {}).topics || {};
+        if (!sameJSON(remote, state.topics)) { state.topics = clone(remote); refreshAll(); }
+        if (!s.metadata.fromCache) setSave("ok", "Salvato nel tuo spazio privato");
+      } else if (!s.metadata.fromCache && Object.keys(state.topics).length) { schedule(); }
+      else if (!s.metadata.fromCache) setSave("ok", "Salvato nel tuo spazio privato");
+    }, onErr);
+    logRef.onSnapshot(function (s) {
+      if (dirtyL || flushing) return;
+      if (s.exists) {
+        var remote = (s.data() || {}).entries || [];
+        if (!sameJSON(remote, state.log)) { state.log = clone(remote); renderLog(); updateSummary(); }
+      } else if (!s.metadata.fromCache && state.log.length) { scheduleLog(); }
+    }, onErr);
+  } catch (e) { fallback("Salvataggio nel tuo spazio non disponibile"); }
+})();
+</script>
+</body>
+</html>

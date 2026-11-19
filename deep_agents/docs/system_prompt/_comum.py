@@ -15,7 +15,7 @@ from typing import Any
 
 # Permite rodar os exemplos direto (botão Play / `python arquivo.py`):
 # adiciona a raiz do repositório ao sys.path para o import `src.*` funcionar.
-_RAIZ = Path(__file__).resolve().parents[4]
+_RAIZ = Path(__file__).resolve().parents[3]
 if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
 
@@ -30,7 +30,7 @@ if not os.environ.get("ANTHROPIC_AUTH_TOKEN"):
 
 from langchain_core.callbacks import BaseCallbackHandler  # noqa: E402
 
-from src.deep_agents.model.llm_gateway import LLMGateway, ModelConfig, RunReport  # noqa: E402
+from deep_agents.model.llm_gateway import LLMGateway, ModelConfig, RunReport  # noqa: E402
 
 MODELO_PADRAO = "openai:gpt-4.1-mini"
 

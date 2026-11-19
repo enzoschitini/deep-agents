@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from src.deep_agents.model.model_config import ModelConfig
+from deep_agents.model.model_config import ModelConfig
 
 
 @dataclass

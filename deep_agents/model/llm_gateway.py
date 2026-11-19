@@ -13,10 +13,10 @@ from typing import Any, Callable, Iterator
 from langchain.chat_models import init_chat_model
 from langchain_core.callbacks import BaseCallbackHandler
 
-from src.deep_agents.model.metrics import CallMetrics, RunReport
-from src.deep_agents.model.metrics_callback import MetricsCallbackHandler
-from src.deep_agents.model.model_config import ModelConfig
-from src.deep_agents.model.provider_rules import DEFAULT_RULES, ProviderRules, build_kwargs
+from deep_agents.model.metrics import CallMetrics, RunReport
+from deep_agents.model.metrics_callback import MetricsCallbackHandler
+from deep_agents.model.model_config import ModelConfig
+from deep_agents.model.provider_rules import DEFAULT_RULES, ProviderRules, build_kwargs
 
 
 class LLMGateway:
