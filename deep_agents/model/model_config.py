@@ -12,6 +12,7 @@ class ModelConfig:
     model_id: str                       # "gpt-5.4", "claude-sonnet-4-6", ...
     temperature: float | None = None
     max_tokens: int | None = None
+    thinking: str | None = None         # None (padrão do modelo) | "off" | "low" | "medium" | "high"
     timeout: float | None = None        # segundos
     max_retries: int | None = None
     extra: dict[str, Any] = field(default_factory=dict)   # específicos do provedor

@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Callable
 
 from rich.console import Console
 
 from deep_agents.cli.banner import Banner
 from deep_agents.cli.commands import Command, CommandRegistry
-from deep_agents.cli.models import AVAILABLE_MODELS, resolve_choice
+from deep_agents.cli.models import (
+    AVAILABLE_MODELS,
+    TEMPERATURES,
+    THINKING_LEVELS,
+    parse_temperature,
+    parse_thinking,
+    resolve_choice,
+)
 from deep_agents.cli.prompt import ChatPrompt, SlashCompleter
 from deep_agents.cli.renderer import Renderer
 from deep_agents.cli.theme import APP_NAME, APP_VERSION
@@ -47,7 +55,14 @@ class ChatCLI:
         self.commands = self._build_commands()
         self.prompt = ChatPrompt(
             self.console,
-            SlashCompleter(self.commands.listing, lambda: [m.spec for m in self.models]),
+            SlashCompleter(
+                self.commands.listing,
+                {
+                    "/modello": lambda: [m.spec for m in self.models],
+                    "/temperatura": lambda: ["default"] + [f"{v:.1f}" for _, v in TEMPERATURES if v is not None],
+                    "/thinking": lambda: ["default", "off", "low", "medium", "high"],
+                },
+            ),
         )
         self.messages: list = []
         self._running = False
@@ -107,6 +122,8 @@ class ChatCLI:
         )
         if self.agent_factory is not None:
             registry.register(Command("/modello", "scegli il modello (anche: /modello provider:modello)", self._cmd_model))
+            registry.register(Command("/temperatura", "imposta la temperatura (anche: /temperatura 0.7)", self._cmd_temperature))
+            registry.register(Command("/thinking", "imposta il thinking (anche: /thinking high)", self._cmd_thinking))
         return registry
 
     def _cmd_help(self, args: str = "") -> None:
@@ -137,16 +154,89 @@ class ChatCLI:
         if new_config.spec == current.spec:
             self.view.notice("È già il modello in uso.")
             return
+        self._apply_config(new_config, f"Modello impostato: {new_config.spec}")
+
+    def _cmd_temperature(self, args: str = "") -> None:
+        """`/temperatura` abre o seletor; `/temperatura 0.7` (ou `default`) aplica direto."""
+        current = self.gateway.config
+        if args:
+            ok, value = parse_temperature(args)
+            if not ok:
+                self.view.notice("Temperatura non valida (usa un numero tra 0 e 2, oppure 'default').")
+                return
+        else:
+            picked = self._pick_setting(
+                "Temperatura", [label for label, _ in TEMPERATURES],
+                next((i for i, (_, v) in enumerate(TEMPERATURES) if v == current.temperature), 0),
+                other="Altro… (digita un numero tra 0 e 2)",
+            )
+            if picked is None:
+                self.view.notice("Nessuna modifica.")
+                return
+            if picked < len(TEMPERATURES):
+                value = TEMPERATURES[picked][1]
+            else:
+                ok, value = parse_temperature(self._ask_free("0-2"))
+                if not ok:
+                    self.view.notice("Temperatura non valida.")
+                    return
+        label = "default" if value is None else f"{value:g}"
+        self._apply_config(replace(current, temperature=value), f"Temperatura impostata: {label}")
+
+    def _cmd_thinking(self, args: str = "") -> None:
+        """`/thinking` abre o seletor; `/thinking high` (off/low/medium/high/default) aplica direto."""
+        current = self.gateway.config
+        if args:
+            ok, value = parse_thinking(args)
+            if not ok:
+                self.view.notice("Livello non valido (usa: default, off, low, medium, high).")
+                return
+        else:
+            picked = self._pick_setting(
+                "Thinking", [label for label, _ in THINKING_LEVELS],
+                next((i for i, (_, v) in enumerate(THINKING_LEVELS) if v == current.thinking), 0),
+            )
+            if picked is None:
+                self.view.notice("Nessuna modifica.")
+                return
+            value = THINKING_LEVELS[picked][1]
+        self._apply_config(replace(current, thinking=value), f"Thinking impostato: {value or 'default'}")
+
+    # ------------------------------------------------------------ auxiliares
+    def _ask_free(self, hint: str) -> str:
         try:
-            with self.view.status(f"carico {new_config.spec}…"):
+            return self.console.input(f"[grey50]{hint}[/] ❯ ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return ""
+
+    def _pick_setting(self, title: str, labels: list[str], current: int, other: str | None = None) -> int | None:
+        """Seletor com setas (terminal) ou menu numerado (fallback). Devolve o índice ou None.
+        O índice `len(labels)` significa a opção extra `other` (texto livre)."""
+        options = labels + ([other] if other else [])
+        try:
+            if self.prompt.interactive:
+                return self.prompt.select(options, current, title=f"Scegli: {title}")
+            for i, label in enumerate(options, start=1):
+                self.console.print(f"  [bold]{i}[/]  {label}")
+            choice = self._ask_free("numero (invio per annullare)")
+            if choice.isdigit() and 1 <= int(choice) <= len(options):
+                return int(choice) - 1
+        except (EOFError, KeyboardInterrupt):
+            pass
+        return None
+
+    def _apply_config(self, new_config: Any, message: str) -> None:
+        """Reconstrói agente/gateway com a nova configuração; em caso de erro mantém a anterior."""
+        try:
+            with self.view.status(f"applico {new_config.spec}…"):
                 agent, gateway = self.agent_factory(new_config)
         except Exception as e:
-            self.view.error(e)  # mantém o modelo anterior
+            self.view.error(e)
             return
         self.agent, self.gateway = agent, gateway
         self.agent_name = new_config.model_id
         self.banner.agent_name = self.view.agent_name = self.agent_name
-        self.view.notice(f"Modello impostato: {new_config.spec} (la conversazione continua)")
+        self.view.notice(f"{message} (la conversazione continua)")
 
     def _pick_model(self, current_spec: str) -> str:
         """Pede o modelo ao usuário: seletor com setas (terminal) ou menu numerado (fallback)."""

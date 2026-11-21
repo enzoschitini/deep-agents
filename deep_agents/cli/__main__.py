@@ -17,9 +17,11 @@ MODEL_SPEC = "openai:gpt-6.1-sol"
 
 MODEL = ModelConfig.from_spec(
     MODEL_SPEC,
+    temperature=None,   # None = padrão do modelo (ou 0.0–2.0). Na CLI: /temperatura
+    thinking=None,      # None = padrão | "off" | "low" | "medium" | "high". Na CLI: /thinking
     timeout=120,
     max_retries=2,
-    # temperature=..., max_tokens=..., extra={...}  # controles opcionais
+    # max_tokens=..., extra={...}  # controles opcionais
 )
 
 

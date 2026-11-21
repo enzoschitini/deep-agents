@@ -22,17 +22,16 @@ except ImportError:  # pragma: no cover
 
 
 class SlashCompleter:
-    """Sugere comandos ao digitar "/" e os modelos disponíveis depois de "/modello "."""
+    """Sugere comandos ao digitar "/" e, depois do comando, os valores possíveis do argumento."""
 
     def __init__(
         self,
         commands: Callable[[], list[tuple[str, str]]],
-        models: Callable[[], list[str]],
-        model_command: str = "/modello",
+        arguments: dict[str, Callable[[], list[str]]],
     ) -> None:
+        """`arguments` mapeia um comando (ex.: "/modello") às sugestões dos seus argumentos."""
         self._commands = commands
-        self._models = models
-        self._model_command = model_command
+        self._arguments = arguments
 
     def suggestions(self, text: str) -> list[tuple[str, str, int]]:
         """Devolve (texto_sugerido, descrição, posição_inicial_de_substituição)."""
@@ -41,10 +40,11 @@ class SlashCompleter:
         head, space, tail = text.partition(" ")
         if not space:
             return [(n, d, 0) for n, d in self._commands() if n.startswith(head.lower())]
-        if head.lower() == self._model_command:
-            start = len(head) + 1
-            return [(m, "", start) for m in self._models() if m.lower().startswith(tail.lower())]
-        return []
+        options = self._arguments.get(head.lower())
+        if options is None:
+            return []
+        start = len(head) + 1
+        return [(o, "", start) for o in options() if o.lower().startswith(tail.lower())]
 
 
 if PromptSession is not None:
