@@ -1,27 +1,27 @@
 {
   "messages": [
     {
-      "content": "oi",
+      "content": "Oi",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "human",
       "name": null,
-      "id": "f0b8a090-f2b1-4a4a-8c50-3cc9e7e1ccd1"
+      "id": "922ba5ec-6001-4774-8c04-db69a7b55853"
     },
     {
       "content": [
         {
           "type": "text",
-          "text": "Oi! Como posso ajudar?",
+          "text": "Oi! Sou a Laura, como posso ajudar?",
           "annotations": [],
-          "id": "msg_07ace7ab55a2ae8e006b022c2bb3dc87d1b8ee759a08c5932b",
+          "id": "msg_0820acccb20eceb5006b02301aa81487d1877914f656b8144e",
           "phase": "final_answer"
         }
       ],
       "additional_kwargs": {},
       "response_metadata": {
-        "id": "resp_07ace7ab55a2ae8e006b022c2a728c87d1a5640ec7d5155b32",
-        "created_at": 1795304490.0,
+        "id": "resp_0820acccb20eceb5006b0230193b6487d19516ed4ff130dce6",
+        "created_at": 1795305497.0,
         "metadata": {},
         "model": "gpt-6.1-sol",
         "object": "response",
@@ -32,64 +32,16 @@
       },
       "type": "ai",
       "name": null,
-      "id": "resp_07ace7ab55a2ae8e006b022c2a728c87d1a5640ec7d5155b32",
+      "id": "resp_0820acccb20eceb5006b0230193b6487d19516ed4ff130dce6",
       "tool_calls": [],
       "invalid_tool_calls": [],
       "usage_metadata": {
-        "input_tokens": 8099,
-        "output_tokens": 10,
-        "total_tokens": 8109,
+        "input_tokens": 7761,
+        "output_tokens": 14,
+        "total_tokens": 7775,
         "input_token_details": {
-          "cache_creation": 8096,
+          "cache_creation": 7758,
           "cache_read": 0
-        },
-        "output_token_details": {
-          "reasoning": 0
-        }
-      }
-    },
-    {
-      "content": "o que você faz?",
-      "additional_kwargs": {},
-      "response_metadata": {},
-      "type": "human",
-      "name": null,
-      "id": "0f660583-848b-47d7-96ba-dd11d3ef8915"
-    },
-    {
-      "content": [
-        {
-          "type": "text",
-          "text": "Sou um assistente de IA com foco em **pesquisa e explicação**. Posso ajudar você a:\n\n- **Pesquisar na internet** e reunir informações com fontes.\n- **Comparar opções**, como produtos, serviços e ferramentas.\n- **Explicar assuntos** de forma simples ou técnica.\n- **Resumir e analisar** textos, documentos e dados.\n- **Escrever e revisar** e-mails, relatórios e outros conteúdos.\n- **Ajudar com programação**, ideias e planejamento.\n\nQuando algo não está confirmado, deixo isso claro. O que você quer descobrir ou resolver?",
-          "annotations": [],
-          "id": "msg_07ace7ab55a2ae8e006b022c37906c87d1b39cd393f8cc961d",
-          "phase": "final_answer"
-        }
-      ],
-      "additional_kwargs": {},
-      "response_metadata": {
-        "id": "resp_07ace7ab55a2ae8e006b022c3690e487d19c89b8fdcdded225",
-        "created_at": 1795304502.0,
-        "metadata": {},
-        "model": "gpt-6.1-sol",
-        "object": "response",
-        "service_tier": "default",
-        "status": "completed",
-        "model_provider": "openai",
-        "model_name": "gpt-6.1-sol"
-      },
-      "type": "ai",
-      "name": null,
-      "id": "resp_07ace7ab55a2ae8e006b022c3690e487d19c89b8fdcdded225",
-      "tool_calls": [],
-      "invalid_tool_calls": [],
-      "usage_metadata": {
-        "input_tokens": 8120,
-        "output_tokens": 125,
-        "total_tokens": 8245,
-        "input_token_details": {
-          "cache_creation": 21,
-          "cache_read": 8096
         },
         "output_token_details": {
           "reasoning": 0

@@ -14,6 +14,7 @@ from deepagents.middleware.filesystem import FilesystemPermission  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
+from deep_agents.system_prompt.harness_profile import HarnessProfiler  # noqa: E402
 from deep_agents.system_prompt.sys_prompt import SYSTEM_PROMPT  # noqa: E402
 
 # Load environment variables from a .env file
@@ -33,6 +34,7 @@ def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
     per-call metrics (tokens, latency, tool runs) in gateway.history.
     """
     gateway = LLMGateway(config)
+    HarnessProfiler.register(config.spec)   # perfil do harness para este modelo (também no /modello)
     agent = create_deep_agent(
         model=gateway.build(),
         tools=[internet_search],
