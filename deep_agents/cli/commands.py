@@ -10,7 +10,7 @@ from typing import Callable
 class Command:
     name: str                              # ex.: "/aiuto"
     description: str
-    handler: Callable[[], None]
+    handler: Callable[[str], None]         # recebe os argumentos digitados após o nome
     aliases: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -28,15 +28,18 @@ class CommandRegistry:
 
     def is_command(self, text: str) -> bool:
         """True se o texto começa com "/" ou é um alias exato (ex.: "exit")."""
-        key = text.lower()
+        key = text.strip().split(" ")[0].lower()
         return key.startswith("/") or key in self._lookup
 
     def dispatch(self, text: str) -> bool:
-        """Executa o comando; devolve False se o texto não corresponde a nenhum."""
-        command = self._lookup.get(text.lower())
+        """Executa o comando (`/modello openai:gpt-5` -> args="openai:gpt-5").
+
+        Devolve False se o texto não corresponde a nenhum comando."""
+        name, _, args = text.strip().partition(" ")
+        command = self._lookup.get(name.lower())
         if command is None:
             return False
-        command.handler()
+        command.handler(args.strip())
         return True
 
     def listing(self) -> list[tuple[str, str]]:

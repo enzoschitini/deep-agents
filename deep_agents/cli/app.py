@@ -9,6 +9,7 @@ from rich.console import Console
 from deep_agents.cli.banner import Banner
 from deep_agents.cli.commands import Command, CommandRegistry
 from deep_agents.cli.models import AVAILABLE_MODELS, resolve_choice
+from deep_agents.cli.prompt import ChatPrompt, SlashCompleter
 from deep_agents.cli.renderer import Renderer
 from deep_agents.cli.theme import APP_NAME, APP_VERSION
 from deep_agents.utils.json_manager import extract_response_text, manage_result_json
@@ -44,6 +45,10 @@ class ChatCLI:
         self.banner = Banner(name, version, self.agent_name)
         self.view = Renderer(self.console, self.agent_name)
         self.commands = self._build_commands()
+        self.prompt = ChatPrompt(
+            self.console,
+            SlashCompleter(self.commands.listing, lambda: [m.spec for m in self.models]),
+        )
         self.messages: list = []
         self._running = False
 
@@ -67,7 +72,7 @@ class ChatCLI:
     def _read_input(self) -> str | None:
         try:
             self.view.separator()
-            return self.view.prompt().strip()
+            return self.prompt.ask().strip()
         except (EOFError, KeyboardInterrupt):
             return None
 
@@ -101,28 +106,27 @@ class ChatCLI:
             Command("/esci", "termina la chat (anche: /exit, /quit)", self._cmd_exit, ("/exit", "/quit", "exit", "quit"))
         )
         if self.agent_factory is not None:
-            registry.register(Command("/modello", "scegli il modello da usare", self._cmd_model))
+            registry.register(Command("/modello", "scegli il modello (anche: /modello provider:modello)", self._cmd_model))
         return registry
 
-    def _cmd_help(self) -> None:
+    def _cmd_help(self, args: str = "") -> None:
         self.view.commands_table(self.commands.listing())
 
-    def _cmd_clear(self) -> None:
+    def _cmd_clear(self, args: str = "") -> None:
         self.messages = []
         self.console.clear()
         self.banner.render(self.console)
         self.view.notice("Cronologia cancellata.")
 
-    def _cmd_metrics(self) -> None:
+    def _cmd_metrics(self, args: str = "") -> None:
         self.view.totals_table(self.gateway.totals())
 
-    def _cmd_model(self) -> None:
+    def _cmd_model(self, args: str = "") -> None:
+        """`/modello` abre o menu; `/modello provider:modello` (ou número) troca direto."""
         current = self.gateway.config
-        self.view.model_menu(self.models, current.spec)
-        try:
-            choice = self.view.model_prompt().strip()
-        except (EOFError, KeyboardInterrupt):
-            choice = ""
+        choice = args
+        if not choice:
+            choice = self._pick_model(current.spec)
         if not choice:
             self.view.notice("Nessuna modifica.")
             return
@@ -144,5 +148,23 @@ class ChatCLI:
         self.banner.agent_name = self.view.agent_name = self.agent_name
         self.view.notice(f"Modello impostato: {new_config.spec} (la conversazione continua)")
 
-    def _cmd_exit(self) -> None:
+    def _pick_model(self, current_spec: str) -> str:
+        """Pede o modelo ao usuário: seletor com setas (terminal) ou menu numerado (fallback)."""
+        other = "Altro… (digita provider:modello)"
+        try:
+            if self.prompt.interactive:
+                options = [m.spec for m in self.models] + [other]
+                current = next((i for i, m in enumerate(self.models) if m.spec == current_spec), 0)
+                picked = self.prompt.select(options, current, title="Scegli il modello")
+                if picked is None:
+                    return ""
+                if picked < len(self.models):
+                    return self.models[picked].spec
+                return self.view.model_prompt().strip()  # "Altro…": texto livre
+            self.view.model_menu(self.models, current_spec)
+            return self.view.model_prompt().strip()
+        except (EOFError, KeyboardInterrupt):
+            return ""
+
+    def _cmd_exit(self, args: str = "") -> None:
         self._running = False

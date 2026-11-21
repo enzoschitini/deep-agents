@@ -10,10 +10,13 @@ from deep_agents.agent import build_agent  # noqa: E402
 from deep_agents.cli import ChatCLI  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
 
-# Modelo usado pela CLI: altere aqui (provider "openai", "anthropic", "google_genai", ...).
-MODEL = ModelConfig(
-    provider="openai",
-    model_id="gpt-6.1-sol",
+# Modelo inicial da CLI, no formato "provider:modelo". Durante o chat, digite "/" para ver os
+# comandos e "/modello " para escolher outro entre as sugestões.
+#   openai:gpt-5.4 · openai:gpt-5-mini · anthropic:claude-sonnet-5-5 · google_genai:...
+MODEL_SPEC = "openai:gpt-6.1-sol"
+
+MODEL = ModelConfig.from_spec(
+    MODEL_SPEC,
     timeout=120,
     max_retries=2,
     # temperature=..., max_tokens=..., extra={...}  # controles opcionais

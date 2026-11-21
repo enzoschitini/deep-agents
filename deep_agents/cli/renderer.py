@@ -48,9 +48,6 @@ class Renderer:
     def separator(self) -> None:
         self.console.print(Rule(style=MUTED))
 
-    def prompt(self) -> str:
-        return self.console.input(f"[bold {USER_COLOR}]❯[/] ")
-
     def user_message(self, text: str) -> None:
         """Mostra un messaggio dell'utente (utile per rivedere la cronologia)."""
         self._panel(Text(text), f"[bold {USER_COLOR}]Tu[/]", USER_COLOR)
