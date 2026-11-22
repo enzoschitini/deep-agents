@@ -15,7 +15,7 @@ from dotenv import load_dotenv  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
 from deep_agents.system_prompt.harness_profile import HarnessProfiler  # noqa: E402
-from deep_agents.system_prompt.sys_prompt import SYSTEM_PROMPT  # noqa: E402
+from deep_agents.system_prompt.instructions.prompts import SYSTEM_PROMPT  # noqa: E402
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -24,9 +24,10 @@ load_dotenv()
 internet_search = {"type": "web_search"}
 
 # Pasta system_prompt/, montada no caminho virtual /system_prompt/ (somente leitura para o agente).
-# Cada .md em system_prompt/memory/ é um arquivo de memória separado (ordem alfabética: 01_, 02_…).
+# Cada .md em system_prompt/instructions/ é um arquivo de instruções separado (ordem alfabética: 01_, 02_…),
+# carregado pelo parâmetro memory= do Deep Agents.
 _PROMPT_DIR = Path(__file__).resolve().parent / "system_prompt"
-_MEMORY_FILES = [f"/system_prompt/memory/{p.name}" for p in sorted((_PROMPT_DIR / "memory").glob("*.md"))]
+_MEMORY_FILES = [f"/system_prompt/instructions/{p.name}" for p in sorted((_PROMPT_DIR / "instructions").glob("*.md"))]
 
 def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
     """Create the agent for the given model.

@@ -15,9 +15,9 @@ As chaves de API ficam no `.env` da raiz (carregado com `load_dotenv()` em `agen
 
 | Pasta/arquivo | Papel |
 |---|---|
-| `agent.py` | `build_agent(config)` → `(agent, gateway)`. Monta `create_deep_agent` com o modelo do gateway, a tool `internet_search` (web_search nativo da OpenAI), memória `/system_prompt/memory/*.md` e permissões. |
+| `agent.py` | `build_agent(config)` → `(agent, gateway)`. Monta `create_deep_agent` com o modelo do gateway, a tool `internet_search` (web_search nativo da OpenAI), instruções `/system_prompt/instructions/*.md` (via `memory=`) e permissões. |
 | `model/` | Camada de modelos. `ModelConfig` (spec `"provider:modelo"`, temperature, thinking, timeout…), `LLMGateway` (cria o modelo e coleta métricas em `gateway.history`), `ProviderRules` (renomeia/descarta/fixa parâmetros por provedor, ex.: `reasoning_effort` na OpenAI, `thinking` budget na Anthropic), `metrics*.py` (tokens, latência, custo, tool runs). |
-| `system_prompt/` | `sys_prompt.py` (`SYSTEM_PROMPT`), `memory/` (vários `.md` temáticos = memória do agente, carregados em ordem alfabética; a pasta `system_prompt/` é montada **somente leitura** em `/system_prompt/`), `harness_profile.py` (`HarnessProfiler`, perfil do harness registrado por modelo). |
+| `system_prompt/` | `instructions/` (`prompts.py` com `SYSTEM_PROMPT` e os textos do perfil do harness + vários `.md` temáticos carregados em ordem alfabética; a pasta `system_prompt/` é montada **somente leitura** em `/system_prompt/`), `harness_profile.py` (`HarnessProfiler`, perfil do harness registrado por modelo). |
 | `cli/` | `ChatCLI` (`app.py`, ciclo e comandos), `Renderer` (`renderer.py`, tudo o que se desenha), `commands.py` (registry de comandos `/…`), `models.py` (lista/escolha de modelos), `prompt.py`, `banner.py`, `theme.py` (cores). |
 | `utils/json_manager.py` | `manage_result_json`: salva o resultado completo do agente em `data/agent_result.json`. |
 | `docs/` | Material de estudo (prompts isolados `docs/system_prompt/01..06`, mapa da doc). Não faz parte do runtime. |
@@ -32,6 +32,6 @@ As chaves de API ficam no `.env` da raiz (carregado com `load_dotenv()` em `agen
 - Imports no topo dos entry points usam `# noqa: E402` porque o `sys.path` é ajustado antes (permite rodar com o botão Play). Não "arrumar".
 - Todo desenho no terminal passa pelo `Renderer`; `ChatCLI` não imprime direto. Erros: `view.error(e, contexto)` — sempre passar o contexto (onde falhou).
 - Parâmetros específicos de provedor pertencem a `ProviderRules`, não ao `LLMGateway` nem à CLI. Para suportar um provedor/modelo novo, estender `DEFAULT_RULES`.
-- O agente não pode escrever em `/system_prompt/**` (permissão `deny`); mudanças em `system_prompt/memory/*.md` são feitas por você no disco.
+- O agente não pode escrever em `/system_prompt/**` (permissão `deny`); mudanças em `system_prompt/instructions/*.md` são feitas por você no disco.
 - `HarnessProfiler.register(spec)` precisa rodar para cada modelo (inclusive após `/modello`); chaves com nome errado em `tool_description_overrides` viram no-op silencioso.
 - Testes ficam em `tests/` na raiz do repo (`LLMGateway` aceita `model=` para injetar um modelo fake).

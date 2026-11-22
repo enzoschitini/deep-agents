@@ -4,6 +4,12 @@ from dotenv import load_dotenv
 from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, register_harness_profile
 from langchain.agents.middleware import AgentMiddleware
 
+from deep_agents.system_prompt.instructions.prompts import (
+    HARNESS_BASE_PROMPT,
+    HARNESS_SUFFIX_PROMPT,
+    HARNESS_TOOL_DESCRIPTIONS,
+)
+
 load_dotenv()
 
 class CountCallings(AgentMiddleware):
@@ -22,12 +28,11 @@ class HarnessProfiler:
     @staticmethod
     def build() -> HarnessProfile:
         return HarnessProfile(
-            # BASE: texto fixo do "harness", logo depois do system_prompt= do agente (que aqui não existe).
-            base_system_prompt="Você é um assistente técnico. Seja direto e preciso.",
-            # SUFFIX: último bloco do prompt, o mais perto do histórico da conversa.
-            system_prompt_suffix="REGRA DO PERFIL: responda em no máximo 3 frases e use português do Brasil.",
-            # Troca a descrição que o modelo lê da ferramenta `ls` (chave com nome errado = no-op silencioso).
-            tool_description_overrides={"ls": "Lista os arquivos do diretório virtual. (descrição do perfil)"},
+            # Textos em instructions/prompts.py: BASE (após o system_prompt=) e SUFFIX (último bloco do prompt).
+            base_system_prompt=HARNESS_BASE_PROMPT,
+            system_prompt_suffix=HARNESS_SUFFIX_PROMPT,
+            # Troca a descrição que o modelo lê de cada ferramenta (chave com nome errado = no-op silencioso).
+            tool_description_overrides=HARNESS_TOOL_DESCRIPTIONS,
             # Some da lista de ferramentas do modelo (calibragem, não segurança).
             excluded_tools=frozenset({"execute"}),
             # Remove o middleware de resumo da pilha. Nome que não casa com nada na pilha é rejeitado.
