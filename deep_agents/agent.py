@@ -9,13 +9,10 @@ if str(_RAIZ) not in sys.path:
 from typing import Any  # noqa: E402
 
 from deepagents import create_deep_agent  # noqa: E402
-from deepagents.backends import CompositeBackend, FilesystemBackend, StateBackend  # noqa: E402
-from deepagents.middleware.filesystem import FilesystemPermission  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
-from deep_agents.prompts.harness_profile import HarnessProfiler  # noqa: E402
-from deep_agents.prompts.system import SYSTEM_PROMPT  # noqa: E402
+from deep_agents.prompts.agent_prompts import AgentPrompts  # noqa: E402
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -23,11 +20,7 @@ load_dotenv()
 # OpenAI's built-in web search — no extra install or API key needed
 internet_search = {"type": "web_search"}
 
-# Pasta prompts/, montada no caminho virtual /prompts/ (somente leitura para o agente).
-# Cada .md em prompts/rules/ é um arquivo de regras separado (ordem alfabética: 01_, 02_…),
-# carregado pelo parâmetro memory= do Deep Agents.
-_PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
-_MEMORY_FILES = [f"/prompts/rules/{p.name}" for p in sorted((_PROMPT_DIR / "rules").glob("*.md"))]
+prompts = AgentPrompts()   # system prompt, regras (.md), backend, permissões e perfil do harness
 
 def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
     """Create the agent for the given model.
@@ -36,16 +29,15 @@ def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
     per-call metrics (tokens, latency, tool runs) in gateway.history.
     """
     gateway = LLMGateway(config)
-    HarnessProfiler.register(config.spec)   # perfil do harness para este modelo (também no /modello)
+    prompts = AgentPrompts()   # system prompt, regras (.md), backend, permissões e perfil do harness
+    
+    prompts.register_harness(config.spec)   # perfil do harness para este modelo (também no /modello)
     agent = create_deep_agent(
         model=gateway.build(),
         tools=[internet_search],
-        system_prompt=SYSTEM_PROMPT,
-        memory=_MEMORY_FILES,
-        backend=CompositeBackend(
-            default=StateBackend(),
-            routes={"/prompts/": FilesystemBackend(root_dir=_PROMPT_DIR, virtual_mode=True)},
-        ),
-        permissions=[FilesystemPermission(operations=["write"], paths=["/prompts/**"], mode="deny")],
+        system_prompt=prompts.system_prompt,
+        memory=prompts.memory_files,
+        backend=prompts.backend,
+        permissions=prompts.permissions,
     )
     return agent, gateway

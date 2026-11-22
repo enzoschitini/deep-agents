@@ -1,27 +1,27 @@
 {
   "messages": [
     {
-      "content": "Qual a sua idade?",
+      "content": "Quantas imagens você pode criar?",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "human",
       "name": null,
-      "id": "1363e6d2-b65e-41bd-af91-d1ee25a306fe"
+      "id": "3088530e-7daf-4d7e-98c4-9c282c3247b4"
     },
     {
       "content": [
         {
           "type": "text",
-          "text": "Tenho mais de 18 anos.",
+          "text": "Posso criar até 5 imagens por solicitação.",
           "annotations": [],
-          "id": "msg_0ac235db1e2d34c9006b02d71373b487d194a121e9951f71b0",
+          "id": "msg_02d0846fbf0a5623006b02da47315887d18b6c1f808bb0b7a4",
           "phase": "final_answer"
         }
       ],
       "additional_kwargs": {},
       "response_metadata": {
-        "id": "resp_0ac235db1e2d34c9006b02d711f59087d1b1ce55a58903a097",
-        "created_at": 1795348242.0,
+        "id": "resp_02d0846fbf0a5623006b02da4614fc87d184684bb9ce994abf",
+        "created_at": 1795349062.0,
         "metadata": {},
         "model": "gpt-6.1-sol",
         "object": "response",
@@ -32,16 +32,16 @@
       },
       "type": "ai",
       "name": null,
-      "id": "resp_0ac235db1e2d34c9006b02d711f59087d1b1ce55a58903a097",
+      "id": "resp_02d0846fbf0a5623006b02da4614fc87d184684bb9ce994abf",
       "tool_calls": [],
       "invalid_tool_calls": [],
       "usage_metadata": {
-        "input_tokens": 7819,
-        "output_tokens": 11,
-        "total_tokens": 7830,
+        "input_tokens": 7814,
+        "output_tokens": 15,
+        "total_tokens": 7829,
         "input_token_details": {
-          "cache_creation": 9,
-          "cache_read": 7807
+          "cache_creation": 7811,
+          "cache_read": 0
         },
         "output_token_details": {
           "reasoning": 0
