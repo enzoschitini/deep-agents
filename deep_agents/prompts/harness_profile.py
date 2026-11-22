@@ -13,11 +13,20 @@ from deep_agents.prompts.system import (
 load_dotenv()
 
 class CountCallings(AgentMiddleware):
-    """extra_middleware: exemplo mínimo. Roda antes de cada chamada ao modelo."""
+    """extra_middleware: exemplo mínimo. Roda antes de cada chamada ao modelo.
+
+    O nº recomeça a cada pergunta, para bater com o "chiamate LLM" da linha de métricas (que ainda soma as chamadas
+    de resumo, feitas dentro do middleware de resumo e que não passam por aqui). O número entre parênteses é a
+    contagem bruta de mensagens do estado (histórico de texto + as mensagens das tools deste turno), não o que
+    vai ao modelo."""
 
     def __init__(self) -> None:
         super().__init__()
         self.n = 0
+
+    def before_agent(self, state, runtime):
+        self.n = 0
+        return None
 
     def before_model(self, state, runtime):
         self.n += 1

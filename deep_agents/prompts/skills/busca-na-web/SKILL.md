@@ -9,8 +9,9 @@ Método para buscar com `internet_search` de forma coerente e produtiva. Siga na
 
 ## 1. Decomponha antes de buscar
 
-- Quebre a pergunta em 2 a 5 sub-perguntas independentes, cada uma com um ângulo diferente (definição, estado atual, números, comparação, críticas).
+- Quebre a pergunta nas sub-perguntas independentes que ela realmente tem (de 1 a 5; um fato simples tem uma só), cada uma com um ângulo diferente (definição, estado atual, números, comparação, críticas).
 - Identifique o que é **estável** (conceitos) e o que é **volátil** (versões, preços, leis, notícias). O volátil exige fonte recente.
+- Lance as buscas independentes todas juntas, na mesma rodada (chamadas de `internet_search` em paralelo). Só busque depois de ler os resultados quando a busca depender deles.
 
 ## 2. Escreva queries curtas e específicas
 

@@ -70,3 +70,65 @@ f94243c5,20261122-160436,human,Quem é o craque do campionato?,2026-11-22T19:06:
 a23fbf9f,20261122-160436,ai,"O destaque citado no arquivo é **Kylian Mbappé, do Real Madrid**, como jogador do mês de outubro da LaLiga — não como vencedor do prêmio de melhor jogador da temporada.",2026-11-22T19:06:51+00:00
 5eb4dd4c,20261122-160436,human,Valeu,2026-11-22T19:07:15+00:00
 1a84c77b,20261122-160436,ai,De nada!,2026-11-22T19:07:15+00:00
+78bb89f3,20261122-160436,human,oi,2026-11-22T19:10:09+00:00
+50df6443,20261122-160436,ai,Oi! Como posso ajudar?,2026-11-22T19:10:09+00:00
+484f1120,20261122-161105,human,oi,2026-11-22T19:11:08+00:00
+36c42230,20261122-161105,ai,"Oi! Sou a Laura, como posso ajudar?",2026-11-22T19:11:08+00:00
+bd2417b7,20261122-161105,human,quem é o craque da laliga?,2026-11-22T19:11:26+00:00
+4c91f656,20261122-161105,ai,Você quer saber quem é o principal craque da LaLiga hoje ou quem ganhou o prêmio de melhor jogador da última temporada?,2026-11-22T19:11:26+00:00
+3b8d62e5,20261122-161105,human,Atualmente,2026-11-22T19:12:01+00:00
+0c10e63a,20261122-161105,ai,"**Eu escolheria Lamine Yamal, do Barcelona, como o principal craque da LaLiga hoje** — uma avaliação de talento e influência no jogo, não uma referência ao prêmio da temporada passada.
+Ele combina criação, drible e gols; **Raphinha também tem um argumento forte pela fase atual**, enquanto Mbappé está entre os principais concorrentes.
+
+**Fontes:** [Estatísticas — StatMuse](https://www.statmuse.com/fc/ask/top-player-ratings-in-2026-la-liga) · [Destaque recente de Raphinha — LaLiga](https://www.laliga.com/en-GB/news/raphinha-ea-sports-laliga-player-of-the-month-for-september)",2026-11-22T19:12:01+00:00
+287461f2,20261122-161105,human,como está a tabela de pontos do campeonato (quero os 5 primeiros),2026-11-22T19:13:20+00:00
+d763e5bd,20261122-161105,ai,"Os cinco primeiros da LaLiga 2026/27, no recorte da [ESPN com 12 jogos por equipe](https://www.espn.com/soccer/standings/_/league/esp.1), são:
+
+| Posição | Time | Pontos |
+|---|---|---:|
+| 1º | Barcelona | 33 |
+| 2º | Real Madrid | 30 |
+| 3º | Atlético de Madrid | 28 |
+| 4º | Betis | 26 |
+| 5º | Real Sociedad | 22 |
+
+**Há divergência de atualização:** o [Goal](https://www.goal.com/en-us/competition/laliga/table/34pl8szyvrbwcmfkuocjm3r6t) apresenta um recorte posterior, com os mesmos cinco na mesma ordem e 36, 33, 28, 27 e 23 pontos, respectivamente.",2026-11-22T19:13:20+00:00
+ecb390ec,20261122-161105,human,Qual a data de hoje?,2026-11-22T19:14:07+00:00
+3f7f8f21,20261122-161105,ai,"Hoje é **22 de novembro de 2026, domingo**, conforme o [Time.is](https://time.is/UTC).",2026-11-22T19:14:07+00:00
+7ae5c09a,20261122-161105,human,valeu,2026-11-22T19:14:28+00:00
+697dd68e,20261122-161105,ai,De nada!,2026-11-22T19:14:28+00:00
+b58bf4f6,20261122-163115,human,Oi,2026-11-22T19:31:21+00:00
+cbc45626,20261122-163115,ai,"Oi! Sou a Laura, como posso ajudar?",2026-11-22T19:31:21+00:00
+ace0a59f,20261122-163115,human,Tabela do campeonato laliga,2026-11-22T19:32:10+00:00
+8e66ce27,20261122-163115,ai,"### LaLiga 2026/27 — classificação em 22/11/2026
+
+Tabela exibida pelo **Goal**, com partidas da rodada ainda em andamento:
+
+| Pos. | Time | Pontos | Jogos |
+|---:|---|---:|---:|
+| 1 | Barcelona | **36** | 13 |
+| 2 | Real Madrid | **33** | 13 |
+| 3 | Atlético de Madrid | **28** | 12 |
+| 4 | Betis | **27** | 13 |
+| 5 | Real Sociedad | **23** | 13 |
+| 6 | Sevilla | **19** | 13 |
+| 7 | Athletic Bilbao | **16** | 12 |
+| 8 | Alavés | **16** | 13 |
+| 9 | Villarreal | **15** | 13 |
+| 10 | Espanyol | **15** | 13 |
+| 11 | Deportivo La Coruña | **15** | 13 |
+| 12 | Racing Santander | **15** | 13 |
+| 13 | Celta de Vigo | **13** | 13 |
+| 14 | Rayo Vallecano | **12** | 12 |
+| 15 | Getafe | **12** | 12 |
+| 16 | Osasuna | **12** | 12 |
+| 17 | Valencia | **12** | 13 |
+| 18 | Levante | **11** | 12 |
+| 19 | Elche | **10** | 12 |
+| 20 | Málaga | **5** | 12 |
+
+**Observação:** a ESPN ainda mostrava uma atualização anterior da rodada, por isso os números podem variar entre fontes.
+
+**Fontes:** [Goal — classificação ao vivo](https://www.goal.com/en-us/competition/laliga/table/34pl8szyvrbwcmfkuocjm3r6t) · [ESPN — classificação](https://www.espn.com/soccer/standings/_/league/esp.1)",2026-11-22T19:32:10+00:00
+12eea304,20261122-163115,human,Valeu,2026-11-22T19:33:18+00:00
+3d34a702,20261122-163115,ai,De nada!,2026-11-22T19:33:18+00:00

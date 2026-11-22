@@ -105,7 +105,8 @@ class ChatCLI:
         turn = self.channel.begin_turn() if self.channel is not None else None
         try:
             with self.view.status():
-                result, report = self.gateway.run_agent(self.agent, {"messages": self.messages})
+                # Cópia: o LangGraph converte, no lugar, os itens da lista recebida em objetos de mensagem.
+                result, report = self.gateway.run_agent(self.agent, {"messages": list(self.messages)})
         except KeyboardInterrupt:
             self.messages.pop()
             self.view.notice("\nRisposta interrotta.")
@@ -115,17 +116,28 @@ class ChatCLI:
             self.view.error(e, f"chiamata al modello {self.gateway.config.spec}")
             return
 
-        # As mensagens retornadas já contêm todo o histórico + a nova resposta
-        self.messages = result["messages"]
-        manage_result_json(result)
+        manage_result_json(result)   # o resultado completo do turno (com as tools) fica no JSON
         self.view.skills(skills_used(report))
         self.view.tools(tools_used(report, self.tool_names))
         answer = extract_response_text(result)
+        self._remember(answer)
         self.view.agent_message(answer)
         if self.channel is not None:
             self.view.sources(self.channel.query(turn=turn, kind="sources"))
         self.view.metrics(report)
         self._save_turn(text, answer)
+
+    def _remember(self, answer: str) -> None:
+        """Guarda no histórico só o texto da resposta, sem as chamadas e os resultados das tools do turno.
+
+        Reenviar `result["messages"]` fazia cada pergunta carregar os resultados brutos de todas as buscas anteriores
+        (milhares de tokens por chamada) e, com o resumo de contexto, disparava o resumo do histórico inteiro a cada
+        turno: o agente é chamado sem checkpointer, então o resumo anterior se perdia. A resposta já traz o que a
+        busca encontrou, e este é o mesmo formato que /sessioni usa ao retomar uma sessão."""
+        if answer.strip():
+            self.messages.append({"role": "assistant", "content": answer})
+        else:
+            self.messages.pop()  # sem resposta: tira também a pergunta, para o histórico não ficar torto
 
     # ----------------------------------------------------------------- sessões
     def _refresh_session(self) -> None:

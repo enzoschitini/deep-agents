@@ -11,7 +11,7 @@ from deepagents.middleware import SummarizationMiddleware
 from deep_agents.memory.storage.fake_vectorial import FakeVectorialDatabase
 from deep_agents.memory.storage.local_csv import LocalCSV
 from deep_agents.memory.storage.storage_memory import MemoryRepository, SessionInfo, StorageMemory
-from deep_agents.memory.config import KEEP_MESSAGES, SUMMARY_EVERY_INTERACTIONS, TRIM_TOKENS_TO_SUMMARIZE
+from deep_agents.memory.config import KEEP_MESSAGES, SUMMARY_TRIGGER_TOKENS, TRIM_TOKENS_TO_SUMMARIZE
 from deep_agents.prompts.system import SUMMARY_PROMPT
 
 DEFAULT_CSV = Path(__file__).resolve().parent / "local_database.csv"
@@ -53,16 +53,17 @@ class MemoryBuilder:
 
     # ------------------------------------------------------------------ resumo
     def summarization(self, model: Any, backend: Any) -> SummarizationMiddleware:
-        """Middleware que comprime o contexto: passando de `SUMMARY_EVERY_INTERACTIONS` interações, as mensagens
+        """Middleware que comprime o contexto: quando ele passa de `SUMMARY_TRIGGER_TOKENS` tokens, as mensagens
         antigas viram um resumo (guiado por `SUMMARY_PROMPT`) e as `KEEP_MESSAGES` mais recentes ficam intactas
         (valores em `memory/config.py`).
-        Uma interação = pergunta + resposta = 2 mensagens (chamadas de ferramenta contam como mensagens extras).
+        O gatilho é por tokens, não por nº de mensagens: cada rodada de busca soma várias mensagens e um teto
+        de mensagens disparava o resumo no meio da pesquisa (ver `memory/config.py`).
         Passar este middleware a `create_deep_agent(middleware=[...])` substitui o resumo padrão do SDK."""
         return SummarizationMiddleware(
             model=model,
             backend=backend,
             summary_prompt=SUMMARY_PROMPT,
-            trigger=("messages", SUMMARY_EVERY_INTERACTIONS * 2),
+            trigger=("tokens", SUMMARY_TRIGGER_TOKENS),
             keep=("messages", KEEP_MESSAGES),
             trim_tokens_to_summarize=TRIM_TOKENS_TO_SUMMARIZE,
         )

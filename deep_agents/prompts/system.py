@@ -16,6 +16,17 @@ You have access to an internet search tool as your primary means of gathering in
 Use this to run an internet search for a given query. You can specify the max number of results to return and the topic ("general", "news" or "finance").
 """
 
+# Acrescentado ao SYSTEM_PROMPT na montagem do agente (AgentPrompts.system_prompt). {today} é a data local
+# no momento em que o agente é criado. Sem ela o modelo não sabe que dia é e gasta uma rodada de buscas na
+# web só para descobrir (e chuta o ano das queries).
+TODAY_PROMPT = """
+
+## Data de hoje
+
+Hoje é {today}. Use esta data como referência para "hoje", "atualmente" e "este ano" e para escolher o ano das
+buscas. Nunca pesquise a data na web.
+"""
+
 # Prompt do SummarizationMiddleware (memory/build_memory.py). PRECISA conter o marcador {messages}.
 SUMMARY_PROMPT = """\
 Resuma a conversa abaixo em português, em no máximo 8 tópicos curtos. Preserve com fidelidade:
