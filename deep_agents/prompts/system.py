@@ -16,6 +16,17 @@ You have access to an internet search tool as your primary means of gathering in
 Use this to run an internet search for a given query. You can specify the max number of results to return, the topic, and whether raw content should be included.
 """
 
+# Prompt do SummarizationMiddleware (memory/build_memory.py). PRECISA conter o marcador {messages}.
+SUMMARY_PROMPT = """\
+Resuma a conversa abaixo em português, em no máximo 8 tópicos curtos. Preserve com fidelidade:
+quem é o usuário (nome, perfil) e suas preferências, decisões tomadas, fatos e números importantes,
+fontes já consultadas e pendências. Não invente nada. Responda só com o resumo.
+
+<messages>
+{messages}
+</messages>
+"""
+
 # BASE: texto fixo do "harness", logo depois do system_prompt= do agente.
 HARNESS_BASE_PROMPT = "Você é um assistente técnico. Seja direto e preciso."
 

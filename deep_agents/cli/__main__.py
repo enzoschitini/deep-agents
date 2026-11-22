@@ -30,11 +30,11 @@ MODEL = ModelConfig.from_spec(
 
 
 def chat_loop(model: ModelConfig = MODEL) -> None:
-    memory = MemoryBuilder()  # sessão nova e vazia a cada execução; só a CLI a usa (o agente não acessa a memória)
+    memory = MemoryBuilder()  # sessão nova e vazia a cada execução; compartilhada com o agente (resumo de contexto) entre as reconstruções
 
     def create_agent(config: ModelConfig):
         """Fábrica usada no início e a cada troca de modelo/temperatura/thinking (/modello…)."""
-        return AgentBuilder(config).build()
+        return AgentBuilder(config, memory=memory).build()
 
     try:
         agent, gateway = create_agent(model)

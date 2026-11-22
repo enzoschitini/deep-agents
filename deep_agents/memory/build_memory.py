@@ -1,13 +1,18 @@
-"""MemoryBuilder: fachada da memória de conversas (usada pela CLI; o agente não acessa a memória)."""
+"""MemoryBuilder: fachada da memória de conversas (sessões para a CLI e resumo de contexto para o agente)."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+from deepagents.middleware import SummarizationMiddleware
 
 from deep_agents.memory.storage.fake_vectorial import FakeVectorialDatabase
 from deep_agents.memory.storage.local_csv import LocalCSV
 from deep_agents.memory.storage.storage_memory import MemoryRepository, SessionInfo, StorageMemory
+from deep_agents.memory.config import KEEP_MESSAGES, SUMMARY_EVERY_INTERACTIONS, TRIM_TOKENS_TO_SUMMARIZE
+from deep_agents.prompts.system import SUMMARY_PROMPT
 
 DEFAULT_CSV = Path(__file__).resolve().parent / "local_database.csv"
 _CHAT_ROLE = {"human": "user", "ai": "assistant"}  # papéis no formato de mensagens do chat
@@ -25,6 +30,7 @@ class MemoryBuilder:
     começa nova e vazia, e pode ser trocada por `new_session()` ou `resume()`.
       - storage → `StorageMemory` (CSV ou vetorial fake, hoje; bancos reais depois)
       - sessão  → `session_id`, `message_count()`, `sessions()`, `history()`, `record_turn()`
+      - resumo  → `summarization(model, backend)`, o único ponto em que o agente usa a memória (comprime o contexto)
     """
 
     def __init__(
@@ -44,6 +50,22 @@ class MemoryBuilder:
         if database == "fake_vectorial":
             return FakeVectorialDatabase()
         raise ValueError(f"Tipo de banco de dados desconhecido: {database}")
+
+    # ------------------------------------------------------------------ resumo
+    def summarization(self, model: Any, backend: Any) -> SummarizationMiddleware:
+        """Middleware que comprime o contexto: passando de `SUMMARY_EVERY_INTERACTIONS` interações, as mensagens
+        antigas viram um resumo (guiado por `SUMMARY_PROMPT`) e as `KEEP_MESSAGES` mais recentes ficam intactas
+        (valores em `memory/config.py`).
+        Uma interação = pergunta + resposta = 2 mensagens (chamadas de ferramenta contam como mensagens extras).
+        Passar este middleware a `create_deep_agent(middleware=[...])` substitui o resumo padrão do SDK."""
+        return SummarizationMiddleware(
+            model=model,
+            backend=backend,
+            summary_prompt=SUMMARY_PROMPT,
+            trigger=("messages", SUMMARY_EVERY_INTERACTIONS * 2),
+            keep=("messages", KEEP_MESSAGES),
+            trim_tokens_to_summarize=TRIM_TOKENS_TO_SUMMARIZE,
+        )
 
     # ------------------------------------------------------------------ sessão
     def _unique_session_id(self) -> str:

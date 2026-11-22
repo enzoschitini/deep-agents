@@ -10,6 +10,7 @@ from typing import Any  # noqa: E402
 
 from deepagents import create_deep_agent  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402
+from deep_agents.memory.build_memory import MemoryBuilder  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
 from deep_agents.prompts.agent_prompts import AgentPrompts  # noqa: E402
@@ -28,13 +29,16 @@ class AgentBuilder:
     - modelo  → LLMGateway (regras por provedor + métricas em gateway.history)
     - prompt  → AgentPrompts (system prompt, regras .md, backend, permissões, perfil do harness)
     - tools   → ferramentas do agente
+    - memory  → MemoryBuilder (middleware de resumo do contexto; as sessões ficam por conta da CLI)
     `build()` junta tudo em `create_deep_agent`.
     """
 
-    def __init__(self, config: ModelConfig) -> None:
+    def __init__(self, config: ModelConfig, memory: MemoryBuilder | None = None) -> None:
+        """`memory` permite à CLI compartilhar a mesma memória/sessão entre as reconstruções do agente."""
         self.config = config
         self.gateway = LLMGateway(config)
         self.prompts = AgentPrompts()
+        self.memory = memory or MemoryBuilder()
 
     def build_model(self) -> Any:
         """Modelo de chat criado pelo gateway (com as regras do provedor aplicadas)."""
@@ -54,10 +58,16 @@ class AgentBuilder:
     def build_tools(self) -> list[Any]:
         return [internet_search]
 
+    def build_memory(self) -> dict[str, Any]:
+        """Argumentos de memória do `create_deep_agent`: o middleware que resume o contexto da conversa."""
+        summarizer = self.memory.summarization(self.build_model(), self.prompts.backend)
+        return {"middleware": [summarizer]}
+
     def build(self) -> tuple[Any, LLMGateway]:
         agent = create_deep_agent(
             model=self.build_model(),
             tools=self.build_tools(),
             **self.build_prompt(),
+            **self.build_memory(),
         )
         return agent, self.gateway

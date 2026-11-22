@@ -35,8 +35,6 @@ class HarnessProfiler:
             tool_description_overrides=HARNESS_TOOL_DESCRIPTIONS,
             # Some da lista de ferramentas do modelo (calibragem, não segurança).
             excluded_tools=frozenset({"execute"}),
-            # Remove o middleware de resumo da pilha. Nome que não casa com nada na pilha é rejeitado.
-            excluded_middleware=frozenset({"SummarizationMiddleware"}),
             # Função sem argumentos: cada pilha recebe sua própria instância.
             extra_middleware=lambda: [CountCallings()],
             # enabled=False remove o subagente general-purpose; sem outros subagentes, a `task` some também.

@@ -38,7 +38,7 @@ agent.py  ──►  AgentBuilder
 |---|---|---|---|---|
 | Modelo | `model/` | `LLMGateway` | `build_model()` | `model_config.py` (`ModelConfig`), `provider_rules.py` (regras por provedor), `metrics*.py` (tokens, latência, custo) |
 | Prompt | `prompts/` | `AgentPrompts` (`agent_prompts.py`) | `build_prompt()` | `system.py` (textos), `harness_profile.py` (perfil por modelo), `rules/*.md` (regras carregadas via `memory=`), `skills/<nome>/SKILL.md` (skills carregadas via `skills=`, lidas sob demanda) |
-| Memória (de conversas) | `memory/` | `MemoryBuilder` (`build_memory.py`) | — (não entra no `AgentBuilder`) | Histórico de mensagens por sessão (`role` human/ai), `storage/` (`StorageMemory`, `MemoryRepository`, `local_csv.py`, `fake_vectorial.py`). Usada só pela CLI: grava os turnos e retoma sessões. O agente não a acessa |
+| Memória (de conversas) | `memory/` | `MemoryBuilder` (`build_memory.py`) | `build_memory()` (devolve `{"middleware": [...]}`: o resumo de contexto) | Histórico de mensagens por sessão (`role` human/ai), `storage/` (`StorageMemory`, `MemoryRepository`, `local_csv.py`, `fake_vectorial.py`). `config.py` (ajustes do resumo). A CLI grava os turnos e retoma sessões; o agente só recebe o middleware de resumo e não lê o histórico salvo |
 | Ferramentas | — | ainda não existe | `build_tools()` | hoje devolve `[internet_search]` direto no `agent.py` (pendente de extrair, ver abaixo) |
 
 `AgentBuilder` (em `agent.py`):
