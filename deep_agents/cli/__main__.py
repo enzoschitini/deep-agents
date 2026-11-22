@@ -13,6 +13,7 @@ from deep_agents.cli import ChatCLI  # noqa: E402
 from deep_agents.cli.renderer import Renderer  # noqa: E402
 from deep_agents.memory.build_memory import MemoryBuilder  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
+from deep_agents.subagents.build_subagents import SubagentBuilder  # noqa: E402
 from deep_agents.toolkit.build_toolkit import ToolkitBuilder  # noqa: E402
 from deep_agents.toolkit.side_channel import SideChannel  # noqa: E402
 
@@ -35,6 +36,11 @@ TOOLKIT = {
     "tavily": {"enabled": True, "tools": None},
 }
 
+# Subagents que o agente principal pode chamar (tool `task`): {subagent: {"enabled": bool}}
+SUBAGENTS = {
+    "pesquisador": {"enabled": True},
+}
+
 
 def chat_loop(model: ModelConfig = MODEL) -> None:
     memory = MemoryBuilder()  # sessão nova e vazia a cada execução; compartilhada com o agente (resumo de contexto) entre as reconstruções
@@ -42,9 +48,11 @@ def chat_loop(model: ModelConfig = MODEL) -> None:
     channel = SideChannel(session_provider=lambda: memory.session_id)  # canal lateral das tools (fontes etc.)
     toolkit = ToolkitBuilder(TOOLKIT, channel=channel)  # criado uma vez: sobrevive às reconstruções do agente
 
+    subagents = SubagentBuilder(SUBAGENTS)
+
     def create_agent(config: ModelConfig):
         """Fábrica usada no início e a cada troca de modelo/temperatura/thinking (/modello…)."""
-        return AgentBuilder(config, memory=memory, toolkit=toolkit).build()
+        return AgentBuilder(config, memory=memory, toolkit=toolkit, subagents=subagents).build()
 
     try:
         agent, gateway = create_agent(model)

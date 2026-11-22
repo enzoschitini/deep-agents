@@ -18,7 +18,7 @@ from deep_agents.cli.models import (
     resolve_choice,
 )
 from deep_agents.cli.prompt import ChatPrompt, SlashCompleter
-from deep_agents.cli.renderer import Renderer, skills_used, tools_used
+from deep_agents.cli.renderer import Renderer, skills_used, subagents_used, tools_used
 from deep_agents.cli.theme import APP_NAME, APP_VERSION
 from deep_agents.utils.json_manager import extract_response_text, manage_result_json
 
@@ -118,6 +118,7 @@ class ChatCLI:
 
         manage_result_json(result)   # o resultado completo do turno (com as tools) fica no JSON
         self.view.skills(skills_used(report))
+        self.view.subagents(subagents_used(report, self.tool_names))
         self.view.tools(tools_used(report, self.tool_names))
         answer = extract_response_text(result)
         self._remember(answer)

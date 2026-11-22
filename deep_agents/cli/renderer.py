@@ -41,20 +41,49 @@ TOOL_SUMMARIES: dict[str, Callable[[dict], str]] = {
 }
 
 
+def _args(run: dict[str, Any]) -> dict[str, Any]:
+    """Argumentos da chamada (o `input` do relatório é o str() do dict); {} se truncado ou fora do formato."""
+    try:
+        args = ast.literal_eval(run.get("input") or "")
+    except (ValueError, SyntaxError):
+        return {}
+    return args if isinstance(args, dict) else {}
+
+
+def _tool_row(run: dict[str, Any]) -> dict[str, Any]:
+    name = run.get("name")
+    try:
+        summary = TOOL_SUMMARIES.get(name, lambda a: "")(_args(run))
+    except KeyError:
+        summary = ""
+    return {"name": name, "summary": summary, "duration_s": run.get("duration_s"), "error": run.get("error")}
+
+
 def tools_used(report: Any, names: set[str]) -> list[dict[str, Any]]:
-    """Execuções (em ordem) das tools cujo nome está em `names`: {name, summary, duration_s, error}."""
-    runs: list[dict[str, Any]] = []
+    """Execuções (em ordem) das tools do agente principal cujo nome está em `names`: {name, summary, duration_s, error}.
+    As que rodaram dentro de um subagent ficam de fora: aparecem sob ele (ver `subagents_used`)."""
+    return [_tool_row(run) for run in report.tool_runs if run.get("name") in names and not run.get("subagent_run")]
+
+
+def subagents_used(report: Any, names: set[str]) -> list[dict[str, Any]]:
+    """Delegações do turno (cada chamada da tool `task`), em ordem: {subagent, task, duration_s, error, tools}.
+    `tools` são as execuções (cujo nome está em `names`) que aquele subagent fez."""
+    delegations: list[dict[str, Any]] = []
     for run in report.tool_runs:
-        name = run.get("name")
-        if name not in names:
+        if run.get("name") != "task":
             continue
-        try:
-            args = ast.literal_eval(run.get("input") or "")  # `input` é o str() do dict de argumentos
-            summary = TOOL_SUMMARIES.get(name, lambda a: "")(args) if isinstance(args, dict) else ""
-        except (ValueError, SyntaxError, KeyError):  # entrada truncada (300 chars) ou fora do formato
-            summary = ""
-        runs.append({"name": name, "summary": summary, "duration_s": run.get("duration_s"), "error": run.get("error")})
-    return runs
+        args = _args(run)
+        text = " ".join(str(args.get("description", "")).split())
+        delegations.append({
+            "subagent": args.get("subagent_type") or "?",
+            "task": text if len(text) <= 110 else text[:109] + "…",
+            "duration_s": run.get("duration_s"),
+            "error": run.get("error"),
+            "tools": [
+                _tool_row(r) for r in report.tool_runs if r.get("subagent_run") == run.get("id") and r.get("name") in names
+            ],
+        })
+    return delegations
 
 
 def format_metrics(report: Any) -> str:
@@ -72,6 +101,9 @@ def format_metrics(report: Any) -> str:
         parts.append(f"cache: {report.cache_read_tokens}")
     if report.tool_runs:
         parts.append(f"strumenti: {len(report.tool_runs)}")
+    n_subagents = sum(1 for run in report.tool_runs if run.get("name") == "task")
+    if n_subagents:
+        parts.append(f"subagent: {n_subagents}")
     if report.cost_usd is not None:
         parts.append(f"costo: ${report.cost_usd:.4f}")
     if report.n_errors:
@@ -155,14 +187,35 @@ class Renderer:
             return
         self.console.print()
         for run in runs:
-            line = Text.assemble(("  ⚙ strumento in uso: ", f"bold {AGENT_COLOR}"), (run["name"], "bold"))
-            if run["summary"]:
-                line.append(f"  {run['summary']}", style=MUTED)
-            if run["duration_s"] is not None:
-                line.append(f"  ({run['duration_s']:.1f}s)", style=MUTED)
-            if run["error"]:
-                line.append(f"  ✖ {run['error']}", style=f"bold {ERROR_COLOR}")
+            self.console.print(self._tool_line(run))
+
+    def subagents(self, delegations: list[dict[str, Any]]) -> None:
+        """Uma linha por subagent chamado no turno, com as tools que ele usou logo abaixo (nada se não houve nenhum)."""
+        if not delegations:
+            return
+        self.console.print()
+        for d in delegations:
+            line = Text.assemble(("  ◈ subagent chiamato: ", f"bold {AGENT_COLOR}"), (d["subagent"], "bold"))
+            if d["task"]:
+                line.append(f"  «{d['task']}»", style=MUTED)
+            if d["duration_s"] is not None:
+                line.append(f"  ({d['duration_s']:.1f}s)", style=MUTED)
+            if d["error"]:
+                line.append(f"  ✖ {d['error']}", style=f"bold {ERROR_COLOR}")
             self.console.print(line)
+            for run in d["tools"]:
+                self.console.print(self._tool_line(run, indent="      "))
+
+    @staticmethod
+    def _tool_line(run: dict[str, Any], indent: str = "  ") -> Text:
+        line = Text.assemble((f"{indent}⚙ strumento in uso: ", f"bold {AGENT_COLOR}"), (run["name"], "bold"))
+        if run["summary"]:
+            line.append(f"  {run['summary']}", style=MUTED)
+        if run["duration_s"] is not None:
+            line.append(f"  ({run['duration_s']:.1f}s)", style=MUTED)
+        if run["error"]:
+            line.append(f"  ✖ {run['error']}", style=f"bold {ERROR_COLOR}")
+        return line
 
     def sources(self, publications: list[Any]) -> None:
         """Seção "Fonti": sites publicados no canal lateral (kind="sources") neste turno, sem repetir URLs."""

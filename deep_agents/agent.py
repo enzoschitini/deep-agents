@@ -16,6 +16,7 @@ from deep_agents.memory.build_memory import MemoryBuilder  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
 from deep_agents.prompts.agent_prompts import AgentPrompts  # noqa: E402
+from deep_agents.subagents.build_subagents import SubagentBuilder  # noqa: E402
 from deep_agents.toolkit.build_toolkit import ToolkitBuilder  # noqa: E402
 
 # Load environment variables from a .env file
@@ -28,6 +29,7 @@ class AgentBuilder:
     - modelo  → LLMGateway (regras por provedor + métricas em gateway.history)
     - prompt  → AgentPrompts (system prompt, regras .md, backend, permissões, perfil do harness)
     - tools   → ferramentas do agente
+    - subagents → SubagentBuilder (subagents que o principal chama com a tool `task`, cada um com suas tools)
     - memory  → MemoryBuilder (middleware de resumo do contexto; as sessões ficam por conta da CLI); também o teto de chamadas ao modelo
     `build()` junta tudo em `create_deep_agent`.
     """
@@ -37,6 +39,7 @@ class AgentBuilder:
         config: ModelConfig,
         memory: MemoryBuilder | None = None,
         toolkit: ToolkitBuilder | None = None,
+        subagents: SubagentBuilder | None = None,
     ) -> None:
         """`memory` e `toolkit` permitem à CLI compartilhar a mesma memória/sessão e o mesmo canal lateral
         entre as reconstruções do agente."""
@@ -45,6 +48,7 @@ class AgentBuilder:
         self.prompts = AgentPrompts()
         self.memory = memory or MemoryBuilder()
         self.toolkit = toolkit or ToolkitBuilder()
+        self.subagents = subagents or SubagentBuilder()
 
     def build_model(self) -> Any:
         """Modelo de chat criado pelo gateway (com as regras do provedor aplicadas)."""
@@ -65,6 +69,10 @@ class AgentBuilder:
         """Tools habilitadas pelo ToolkitBuilder (as tools publicam no canal lateral `self.toolkit.channel`)."""
         return self.toolkit.build()
 
+    def build_subagents(self) -> list[dict[str, Any]]:
+        """Subagents habilitados, cada um com as tools (grupos da toolkit, ex.: tavily) que declarou; as publicações vão ao mesmo canal lateral."""
+        return self.subagents.build(self.build_model(), self.toolkit)
+
     def build_memory(self) -> dict[str, Any]:
         """Argumentos de memória do `create_deep_agent`: o middleware que resume o contexto da conversa."""
         summarizer = self.memory.summarization(self.build_model(), self.prompts.backend)
@@ -74,6 +82,7 @@ class AgentBuilder:
         agent = create_deep_agent(
             model=self.build_model(),
             tools=self.build_tools(),
+            subagents=self.build_subagents(),
             **self.build_prompt(),
             **self.build_memory(),
         )

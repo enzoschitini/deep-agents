@@ -9,6 +9,8 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from pydantic import Field
 
+from deep_agents.toolkit.tools.base import ToolGroup
+
 SUMMARY_MARKER = "Resuma a conversa abaixo"   # início do SUMMARY_PROMPT (prompts/system.py)
 _ids = itertools.count(1)
 
@@ -83,3 +85,12 @@ def internet_search(query: str, max_results: int = 5, topic: str = "general") ->
         f"[{i}] Título {i} sobre {query}\nhttps://exemplo.com/{i}\n" + ("trecho de conteúdo da página " * 30)
         for i in range(1, max_results + 1)
     )
+
+
+class FakeTavily(ToolGroup):
+    """Grupo `tavily` falso (sem API): entra em `ToolkitBuilder(groups={"tavily": FakeTavily})`."""
+
+    name = "tavily"
+
+    def tools(self):
+        return {"internet_search": internet_search}

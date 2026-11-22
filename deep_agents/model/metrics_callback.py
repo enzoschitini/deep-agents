@@ -60,6 +60,8 @@ class MetricsCallbackHandler(BaseCallbackHandler):
         self._lock = threading.Lock()
         self._open: dict[UUID, CallMetrics] = {}
         self._tools: dict[UUID, dict[str, Any]] = {}
+        self._parents: dict[UUID, UUID | None] = {}   # árvore de execução: run → pai (para achar o subagent de uma tool)
+        self._task_runs: set[UUID] = set()            # runs da tool `task` (delegação a um subagent) em andamento
 
     # ---- início ---------------------------------------------------------- #
     def _start(self, run_id: UUID, serialized: dict | None, messages: list[list[BaseMessage]] | None,
@@ -139,24 +141,56 @@ class MetricsCallbackHandler(BaseCallbackHandler):
         m.error_type = type(error).__name__
         self._finish(m)
 
-    # ---- ferramentas ----------------------------------------------------- #
-    def on_tool_start(self, serialized, input_str, *, run_id, **kwargs):
+    # ---- árvore de execução ---------------------------------------------- #
+    def on_chain_start(self, serialized, inputs, *, run_id, parent_run_id=None, **kwargs):
         with self._lock:
+            self._parents[run_id] = parent_run_id
+
+    def _enclosing_task(self, parent_run_id: UUID | None) -> UUID | None:
+        """Run da `task` (subagent) dentro da qual esta execução acontece; None se for do agente principal."""
+        seen: set[UUID] = set()
+        while parent_run_id is not None and parent_run_id not in seen:
+            if parent_run_id in self._task_runs:
+                return parent_run_id
+            seen.add(parent_run_id)
+            parent_run_id = self._parents.get(parent_run_id)
+        return None
+
+    @staticmethod
+    def _short_input(inputs: Any, input_str: str) -> str:
+        """Entrada da tool para o relatório. Em dict, encurta cada valor (não a string toda): cortar a string
+        no meio tiraria do fim campos importantes (ex.: `subagent_type` da `task`, depois de uma `description` longa)."""
+        if isinstance(inputs, dict) and inputs:
+            inputs = {k: (v[:120] + "…" if isinstance(v, str) and len(v) > 120 else v) for k, v in inputs.items()}
+        return str(inputs or input_str)[:300]
+
+    # ---- ferramentas ----------------------------------------------------- #
+    def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None, **kwargs):
+        name = (serialized or {}).get("name") or kwargs.get("name")
+        with self._lock:
+            self._parents[run_id] = parent_run_id
+            if name == "task":
+                self._task_runs.add(run_id)
             self._tools[run_id] = {
-                "name": (serialized or {}).get("name") or kwargs.get("name"),
-                "input": str(kwargs.get("inputs") or input_str)[:300],
+                "id": str(run_id),
+                "name": name,
+                "input": self._short_input(kwargs.get("inputs"), input_str),
+                "task": self._enclosing_task(parent_run_id),
                 "t0": time.perf_counter(),
             }
 
     def _tool_done(self, run_id: UUID, error: str | None) -> None:
         with self._lock:
             t = self._tools.pop(run_id, None)
+            self._task_runs.discard(run_id)
             if t:
                 self.report.tool_runs.append({
+                    "id": t["id"],
                     "name": t["name"],
                     "input": t["input"],
                     "duration_s": round(time.perf_counter() - t["t0"], 4),
                     "error": error,
+                    "subagent_run": str(t["task"]) if t["task"] else None,   # id da `task` que rodou esta tool
                 })
 
     def on_tool_end(self, output, *, run_id, **kwargs):
