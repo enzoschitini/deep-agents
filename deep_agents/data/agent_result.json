@@ -1,27 +1,27 @@
 {
   "messages": [
     {
-      "content": "Oi",
+      "content": "Qual a sua idade?",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "human",
       "name": null,
-      "id": "922ba5ec-6001-4774-8c04-db69a7b55853"
+      "id": "1363e6d2-b65e-41bd-af91-d1ee25a306fe"
     },
     {
       "content": [
         {
           "type": "text",
-          "text": "Oi! Sou a Laura, como posso ajudar?",
+          "text": "Tenho mais de 18 anos.",
           "annotations": [],
-          "id": "msg_0820acccb20eceb5006b02301aa81487d1877914f656b8144e",
+          "id": "msg_0ac235db1e2d34c9006b02d71373b487d194a121e9951f71b0",
           "phase": "final_answer"
         }
       ],
       "additional_kwargs": {},
       "response_metadata": {
-        "id": "resp_0820acccb20eceb5006b0230193b6487d19516ed4ff130dce6",
-        "created_at": 1795305497.0,
+        "id": "resp_0ac235db1e2d34c9006b02d711f59087d1b1ce55a58903a097",
+        "created_at": 1795348242.0,
         "metadata": {},
         "model": "gpt-6.1-sol",
         "object": "response",
@@ -32,16 +32,16 @@
       },
       "type": "ai",
       "name": null,
-      "id": "resp_0820acccb20eceb5006b0230193b6487d19516ed4ff130dce6",
+      "id": "resp_0ac235db1e2d34c9006b02d711f59087d1b1ce55a58903a097",
       "tool_calls": [],
       "invalid_tool_calls": [],
       "usage_metadata": {
-        "input_tokens": 7761,
-        "output_tokens": 14,
-        "total_tokens": 7775,
+        "input_tokens": 7819,
+        "output_tokens": 11,
+        "total_tokens": 7830,
         "input_token_details": {
-          "cache_creation": 7758,
-          "cache_read": 0
+          "cache_creation": 9,
+          "cache_read": 7807
         },
         "output_token_details": {
           "reasoning": 0

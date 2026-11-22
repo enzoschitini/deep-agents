@@ -23,9 +23,10 @@ load_dotenv()
 # OpenAI's built-in web search — no extra install or API key needed
 internet_search = {"type": "web_search"}
 
-# Pasta com o AGENT.md, montada no caminho virtual /system_prompt/ (somente leitura para o agente).
+# Pasta system_prompt/, montada no caminho virtual /system_prompt/ (somente leitura para o agente).
+# Cada .md em system_prompt/memory/ é um arquivo de memória separado (ordem alfabética: 01_, 02_…).
 _PROMPT_DIR = Path(__file__).resolve().parent / "system_prompt"
-_MEMORY_FILES = ["/system_prompt/AGENT.md"]
+_MEMORY_FILES = [f"/system_prompt/memory/{p.name}" for p in sorted((_PROMPT_DIR / "memory").glob("*.md"))]
 
 def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
     """Create the agent for the given model.
