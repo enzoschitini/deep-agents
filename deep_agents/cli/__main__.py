@@ -6,7 +6,7 @@ _RAIZ = Path(__file__).resolve().parents[2]
 if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
 
-from deep_agents.agent import build_agent  # noqa: E402
+from deep_agents.agent import AgentBuilder  # noqa: E402
 from rich.console import Console  # noqa: E402
 
 from deep_agents.cli import ChatCLI  # noqa: E402
@@ -28,13 +28,18 @@ MODEL = ModelConfig.from_spec(
 )
 
 
+def create_agent(config: ModelConfig):
+    """Fábrica usada no início e a cada troca de modelo/temperatura/thinking (/modello…)."""
+    return AgentBuilder(config).build()
+
+
 def chat_loop(model: ModelConfig = MODEL) -> None:
     try:
-        agent, gateway = build_agent(model)
+        agent, gateway = create_agent(model)
     except Exception as e:
         Renderer(Console(), "startup").error(e, f"avvio: creazione dell'agente con {model.spec}")
         sys.exit(1)
-    ChatCLI(agent, gateway, agent_factory=build_agent).run()
+    ChatCLI(agent, gateway, agent_factory=create_agent).run()
 
 
 # python -m deep_agents.cli

@@ -15,7 +15,7 @@ As chaves de API ficam no `.env` da raiz (carregado com `load_dotenv()` em `agen
 
 | Pasta/arquivo | Papel |
 |---|---|
-| `agent.py` | `build_agent(config)` → `(agent, gateway)`. Monta `create_deep_agent` com o modelo do gateway, a tool `internet_search` (web_search nativo da OpenAI), tudo de prompt vem da fachada `AgentPrompts` (system prompt, regras via `memory=`, backend, permissões). |
+| `agent.py` | `AgentBuilder(config).build()` → `(agent, gateway)` (métodos `build_model`/`build_prompt`/`build_tools`). Monta `create_deep_agent` com o modelo do gateway, a tool `internet_search` (web_search nativo da OpenAI), tudo de prompt vem da fachada `AgentPrompts` (system prompt, regras via `memory=`, backend, permissões). |
 | `model/` | Camada de modelos. `ModelConfig` (spec `"provider:modelo"`, temperature, thinking, timeout…), `LLMGateway` (cria o modelo e coleta métricas em `gateway.history`), `ProviderRules` (renomeia/descarta/fixa parâmetros por provedor, ex.: `reasoning_effort` na OpenAI, `thinking` budget na Anthropic), `metrics*.py` (tokens, latência, custo, tool runs). |
 | `prompts/` | `agent_prompts.py` (`AgentPrompts`, fachada usada pelo `agent.py`), `system.py` (`SYSTEM_PROMPT` e os textos do perfil do harness), `rules/` (vários `.md` temáticos carregados em ordem alfabética), `harness_profile.py` (`HarnessProfiler`, perfil do harness registrado por modelo). A pasta é montada **somente leitura** em `/prompts/`. |
 | `cli/` | `ChatCLI` (`app.py`, ciclo e comandos), `Renderer` (`renderer.py`, tudo o que se desenha), `commands.py` (registry de comandos `/…`), `models.py` (lista/escolha de modelos), `prompt.py`, `banner.py`, `theme.py` (cores). |
@@ -24,7 +24,7 @@ As chaves de API ficam no `.env` da raiz (carregado com `load_dotenv()` em `agen
 
 ## Fluxo
 
-`cli/__main__.py` define `MODEL_SPEC`/`MODEL` → `build_agent` → `ChatCLI(agent, gateway, agent_factory=build_agent).run()`. Trocar modelo/temperatura/thinking no chat chama `agent_factory` de novo (a conversa continua; em caso de erro mantém a configuração anterior).
+`cli/__main__.py` define `MODEL_SPEC`/`MODEL` → `create_agent` (`AgentBuilder(config).build()`) → `ChatCLI(agent, gateway, agent_factory=create_agent).run()`. Trocar modelo/temperatura/thinking no chat chama `agent_factory` de novo (a conversa continua; em caso de erro mantém a configuração anterior).
 
 ## Convenções
 

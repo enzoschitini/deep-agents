@@ -20,24 +20,43 @@ load_dotenv()
 # OpenAI's built-in web search — no extra install or API key needed
 internet_search = {"type": "web_search"}
 
-prompts = AgentPrompts()   # system prompt, regras (.md), backend, permissões e perfil do harness
 
-def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
-    """Create the agent for the given model.
 
-    The gateway applies per-provider rules (renamed/dropped params) and collects
-    per-call metrics (tokens, latency, tool runs) in gateway.history.
+class AgentBuilder:
+    """Monta o agente peça por peça: cada método `build_*` cuida de uma parte.
+
+    - modelo  → LLMGateway (regras por provedor + métricas em gateway.history)
+    - prompt  → AgentPrompts (system prompt, regras .md, backend, permissões, perfil do harness)
+    - tools   → ferramentas do agente
+    `build()` junta tudo em `create_deep_agent`.
     """
-    gateway = LLMGateway(config)
-    prompts = AgentPrompts()   # system prompt, regras (.md), backend, permissões e perfil do harness
-    
-    prompts.register_harness(config.spec)   # perfil do harness para este modelo (também no /modello)
-    agent = create_deep_agent(
-        model=gateway.build(),
-        tools=[internet_search],
-        system_prompt=prompts.system_prompt,
-        memory=prompts.memory_files,
-        backend=prompts.backend,
-        permissions=prompts.permissions,
-    )
-    return agent, gateway
+
+    def __init__(self, config: ModelConfig) -> None:
+        self.config = config
+        self.gateway = LLMGateway(config)
+        self.prompts = AgentPrompts()
+
+    def build_model(self) -> Any:
+        """Modelo de chat criado pelo gateway (com as regras do provedor aplicadas)."""
+        return self.gateway.build()
+
+    def build_prompt(self) -> dict[str, Any]:
+        """Argumentos de prompt do `create_deep_agent`; registra o perfil do harness do modelo."""
+        self.prompts.register_harness(self.config.spec)   # também a cada troca de modelo (/modello)
+        return {
+            "system_prompt": self.prompts.system_prompt,
+            "memory": self.prompts.memory_files,
+            "backend": self.prompts.backend,
+            "permissions": self.prompts.permissions,
+        }
+
+    def build_tools(self) -> list[Any]:
+        return [internet_search]
+
+    def build(self) -> tuple[Any, LLMGateway]:
+        agent = create_deep_agent(
+            model=self.build_model(),
+            tools=self.build_tools(),
+            **self.build_prompt(),
+        )
+        return agent, self.gateway
