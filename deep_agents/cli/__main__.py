@@ -13,6 +13,8 @@ from deep_agents.cli import ChatCLI  # noqa: E402
 from deep_agents.cli.renderer import Renderer  # noqa: E402
 from deep_agents.memory.build_memory import MemoryBuilder  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
+from deep_agents.toolkit.build_toolkit import ToolkitBuilder  # noqa: E402
+from deep_agents.toolkit.side_channel import SideChannel  # noqa: E402
 
 # Modelo inicial da CLI, no formato "provider:modelo". Durante o chat, digite "/" para ver os
 # comandos e "/modello " para escolher outro entre as sugestões.
@@ -28,20 +30,28 @@ MODEL = ModelConfig.from_spec(
     # max_tokens=..., extra={...}  # controles opcionais
 )
 
+# Toolkit: {grupo: {"enabled": bool, "tools": [nomes] | None (= todas do grupo)}}
+TOOLKIT = {
+    "tavily": {"enabled": True, "tools": None},
+}
+
 
 def chat_loop(model: ModelConfig = MODEL) -> None:
     memory = MemoryBuilder()  # sessão nova e vazia a cada execução; compartilhada com o agente (resumo de contexto) entre as reconstruções
 
+    channel = SideChannel(session_provider=lambda: memory.session_id)  # canal lateral das tools (fontes etc.)
+    toolkit = ToolkitBuilder(TOOLKIT, channel=channel)  # criado uma vez: sobrevive às reconstruções do agente
+
     def create_agent(config: ModelConfig):
         """Fábrica usada no início e a cada troca de modelo/temperatura/thinking (/modello…)."""
-        return AgentBuilder(config, memory=memory).build()
+        return AgentBuilder(config, memory=memory, toolkit=toolkit).build()
 
     try:
         agent, gateway = create_agent(model)
     except Exception as e:
         Renderer(Console(), "startup").error(e, f"avvio: creazione dell'agente con {model.spec}")
         sys.exit(1)
-    ChatCLI(agent, gateway, agent_factory=create_agent, memory=memory).run()
+    ChatCLI(agent, gateway, agent_factory=create_agent, memory=memory, toolkit=toolkit).run()
 
 
 # python -m deep_agents.cli

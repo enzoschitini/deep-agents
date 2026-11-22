@@ -27,3 +27,9 @@ bf57c187,20261122-101538,human,a minha é amarelo,2026-11-22T13:18:44+00:00
 33e095e1,20261122-101538,ai,Amarelo! Uma cor alegre e cheia de energia.,2026-11-22T13:18:44+00:00
 388e6ad4,20261122-101538,human,qual meu nome?,2026-11-22T13:19:01+00:00
 4d94b104,20261122-101538,ai,Você ainda não me informou seu nome.,2026-11-22T13:19:01+00:00
+97d28f51,20261122-105908,human,Quais são as novidades mais recentes do LangChain Deep Agents?,2026-11-22T14:00:24+00:00
+429a8d63,20261122-105908,ai,"As novidades mais recentes que encontrei para o **LangChain Deep Agents em Python** são:
+- **Versão 0.7.41:** correção no processamento do canal de mensagens com o reducer do LangGraph e ajustes nas descrições das ferramentas.
+- **Linha 0.7:** redução declarada de **65% dos tokens de entrada** em um turno do agente padrão, sem regressão nas avaliações da equipe, mas com mudanças incompatíveis — incluindo a remoção do `TodoListMiddleware` da configuração padrão.
+
+**Fontes:** [releases oficiais no GitHub](https://github.com/langchain-ai/deepagents/releases) e [changelog Python, com os detalhes de migração](https://docs.langchain.com/oss/python/releases/changelog).",2026-11-22T14:00:24+00:00

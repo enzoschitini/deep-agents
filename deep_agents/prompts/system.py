@@ -13,7 +13,7 @@ You have access to an internet search tool as your primary means of gathering in
 
 ## `internet_search`
 
-Use this to run an internet search for a given query. You can specify the max number of results to return, the topic, and whether raw content should be included.
+Use this to run an internet search for a given query. You can specify the max number of results to return and the topic ("general", "news" or "finance").
 """
 
 # Prompt do SummarizationMiddleware (memory/build_memory.py). PRECISA conter o marcador {messages}.

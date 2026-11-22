@@ -14,13 +14,10 @@ from deep_agents.memory.build_memory import MemoryBuilder  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
 from deep_agents.prompts.agent_prompts import AgentPrompts  # noqa: E402
+from deep_agents.toolkit.build_toolkit import ToolkitBuilder  # noqa: E402
 
 # Load environment variables from a .env file
 load_dotenv()
-
-# OpenAI's built-in web search — no extra install or API key needed
-internet_search = {"type": "web_search"}
-
 
 
 class AgentBuilder:
@@ -33,12 +30,19 @@ class AgentBuilder:
     `build()` junta tudo em `create_deep_agent`.
     """
 
-    def __init__(self, config: ModelConfig, memory: MemoryBuilder | None = None) -> None:
-        """`memory` permite à CLI compartilhar a mesma memória/sessão entre as reconstruções do agente."""
+    def __init__(
+        self,
+        config: ModelConfig,
+        memory: MemoryBuilder | None = None,
+        toolkit: ToolkitBuilder | None = None,
+    ) -> None:
+        """`memory` e `toolkit` permitem à CLI compartilhar a mesma memória/sessão e o mesmo canal lateral
+        entre as reconstruções do agente."""
         self.config = config
         self.gateway = LLMGateway(config)
         self.prompts = AgentPrompts()
         self.memory = memory or MemoryBuilder()
+        self.toolkit = toolkit or ToolkitBuilder()
 
     def build_model(self) -> Any:
         """Modelo de chat criado pelo gateway (com as regras do provedor aplicadas)."""
@@ -56,7 +60,8 @@ class AgentBuilder:
         }
 
     def build_tools(self) -> list[Any]:
-        return [internet_search]
+        """Tools habilitadas pelo ToolkitBuilder (as tools publicam no canal lateral `self.toolkit.channel`)."""
+        return self.toolkit.build()
 
     def build_memory(self) -> dict[str, Any]:
         """Argumentos de memória do `create_deep_agent`: o middleware que resume o contexto da conversa."""

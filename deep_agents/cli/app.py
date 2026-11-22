@@ -18,7 +18,7 @@ from deep_agents.cli.models import (
     resolve_choice,
 )
 from deep_agents.cli.prompt import ChatPrompt, SlashCompleter
-from deep_agents.cli.renderer import Renderer, skills_used
+from deep_agents.cli.renderer import Renderer, skills_used, tools_used
 from deep_agents.cli.theme import APP_NAME, APP_VERSION
 from deep_agents.utils.json_manager import extract_response_text, manage_result_json
 
@@ -43,9 +43,13 @@ class ChatCLI:
         agent_factory: Callable[[Any], tuple[Any, Any]] | None = None,
         models: list | None = None,
         memory: Any | None = None,
+        toolkit: Any | None = None,
     ) -> None:
         """`agent_factory(model_config) -> (agent, gateway)` habilita o comando /modello.
-        `memory` (um `MemoryBuilder`) habilita as sessões: grava cada turno e o comando /sessioni."""
+        `memory` (um `MemoryBuilder`) habilita as sessões: grava cada turno e o comando /sessioni.
+        `toolkit` (um `ToolkitBuilder`) habilita o feedback das tools e a seção de fontes (lidas do canal lateral)."""
+        self.channel = toolkit.channel if toolkit is not None else None
+        self.tool_names = toolkit.tool_names() if toolkit is not None else set()
         self.agent = agent
         self.gateway = gateway
         self.agent_factory = agent_factory
@@ -98,6 +102,7 @@ class ChatCLI:
 
     def _send(self, text: str) -> None:
         self.messages.append({"role": "user", "content": text})
+        turn = self.channel.begin_turn() if self.channel is not None else None
         try:
             with self.view.status():
                 result, report = self.gateway.run_agent(self.agent, {"messages": self.messages})
@@ -114,8 +119,11 @@ class ChatCLI:
         self.messages = result["messages"]
         manage_result_json(result)
         self.view.skills(skills_used(report))
+        self.view.tools(tools_used(report, self.tool_names))
         answer = extract_response_text(result)
         self.view.agent_message(answer)
+        if self.channel is not None:
+            self.view.sources(self.channel.query(turn=turn, kind="sources"))
         self.view.metrics(report)
         self._save_turn(text, answer)
 

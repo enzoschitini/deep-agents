@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import ast
 import os
 import re
 import traceback
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from rich import box
 from rich.console import Console
@@ -32,6 +33,28 @@ def skills_used(report: Any) -> list[str]:
         if match and match.group(1) not in names:
             names.append(match.group(1))
     return names
+
+
+# Resumo personalizado por tool: recebe os argumentos da chamada e devolve o texto mostrado ao lado do nome.
+TOOL_SUMMARIES: dict[str, Callable[[dict], str]] = {
+    "internet_search": lambda args: f"«{args['query']}»" if args.get("query") else "",
+}
+
+
+def tools_used(report: Any, names: set[str]) -> list[dict[str, Any]]:
+    """Execuções (em ordem) das tools cujo nome está em `names`: {name, summary, duration_s, error}."""
+    runs: list[dict[str, Any]] = []
+    for run in report.tool_runs:
+        name = run.get("name")
+        if name not in names:
+            continue
+        try:
+            args = ast.literal_eval(run.get("input") or "")  # `input` é o str() do dict de argumentos
+            summary = TOOL_SUMMARIES.get(name, lambda a: "")(args) if isinstance(args, dict) else ""
+        except (ValueError, SyntaxError, KeyError):  # entrada truncada (300 chars) ou fora do formato
+            summary = ""
+        runs.append({"name": name, "summary": summary, "duration_s": run.get("duration_s"), "error": run.get("error")})
+    return runs
 
 
 def format_metrics(report: Any) -> str:
@@ -125,6 +148,42 @@ class Renderer:
         self.console.print()
         for name in names:
             self.console.print(Text.assemble(("  ✦ skill in uso: ", f"bold {AGENT_COLOR}"), (name, "bold")))
+
+    def tools(self, runs: list[dict[str, Any]]) -> None:
+        """Uma linha por tool da toolkit usada no turno (nada é desenhado se não houve nenhuma)."""
+        if not runs:
+            return
+        self.console.print()
+        for run in runs:
+            line = Text.assemble(("  ⚙ strumento in uso: ", f"bold {AGENT_COLOR}"), (run["name"], "bold"))
+            if run["summary"]:
+                line.append(f"  {run['summary']}", style=MUTED)
+            if run["duration_s"] is not None:
+                line.append(f"  ({run['duration_s']:.1f}s)", style=MUTED)
+            if run["error"]:
+                line.append(f"  ✖ {run['error']}", style=f"bold {ERROR_COLOR}")
+            self.console.print(line)
+
+    def sources(self, publications: list[Any]) -> None:
+        """Seção "Fonti": sites publicados no canal lateral (kind="sources") neste turno, sem repetir URLs."""
+        seen: set[str] = set()
+        rows: list[dict[str, str]] = []
+        for pub in publications:
+            for item in pub.payload:
+                if item["url"] not in seen:
+                    seen.add(item["url"])
+                    rows.append(item)
+        if not rows:
+            return
+        table = Table(box=None, show_header=False, padding=(0, 2))
+        table.add_column(style=f"bold {USER_COLOR}", justify="right")
+        table.add_column()
+        for i, row in enumerate(rows, start=1):
+            cell = Text(row["title"] or row["domain"], style="bold")
+            cell.append(f"\n{row['domain']}  ", style=AGENT_COLOR)
+            cell.append(row["url"], style=MUTED)
+            table.add_row(str(i), cell)
+        self._panel(table, f"[bold {AGENT_COLOR}]Fonti[/] [{MUTED}]({len(rows)})[/]", MUTED)
 
     def metrics(self, report: Any) -> None:
         self.console.print(Text(f"  {format_metrics(report)}", style=MUTED))
