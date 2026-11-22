@@ -9,7 +9,9 @@ if str(_RAIZ) not in sys.path:
 from typing import Any  # noqa: E402
 
 from deepagents import create_deep_agent  # noqa: E402
+from langchain.agents.middleware import ModelCallLimitMiddleware  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402
+from deep_agents.config import MODEL_CALL_LIMIT  # noqa: E402
 from deep_agents.memory.build_memory import MemoryBuilder  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
@@ -26,7 +28,7 @@ class AgentBuilder:
     - modelo  → LLMGateway (regras por provedor + métricas em gateway.history)
     - prompt  → AgentPrompts (system prompt, regras .md, backend, permissões, perfil do harness)
     - tools   → ferramentas do agente
-    - memory  → MemoryBuilder (middleware de resumo do contexto; as sessões ficam por conta da CLI)
+    - memory  → MemoryBuilder (middleware de resumo do contexto; as sessões ficam por conta da CLI); também o teto de chamadas ao modelo
     `build()` junta tudo em `create_deep_agent`.
     """
 
@@ -66,7 +68,7 @@ class AgentBuilder:
     def build_memory(self) -> dict[str, Any]:
         """Argumentos de memória do `create_deep_agent`: o middleware que resume o contexto da conversa."""
         summarizer = self.memory.summarization(self.build_model(), self.prompts.backend)
-        return {"middleware": [summarizer]}
+        return {"middleware": [summarizer, ModelCallLimitMiddleware(run_limit=MODEL_CALL_LIMIT, exit_behavior="end")]}
 
     def build(self) -> tuple[Any, LLMGateway]:
         agent = create_deep_agent(
