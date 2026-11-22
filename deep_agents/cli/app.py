@@ -102,7 +102,7 @@ class ChatCLI:
             return
         except Exception as e:
             self.messages.pop()  # mantém o histórico consistente
-            self.view.error(e)
+            self.view.error(e, f"chiamata al modello {self.gateway.config.spec}")
             return
 
         # As mensagens retornadas já contêm todo o histórico + a nova resposta
@@ -231,7 +231,7 @@ class ChatCLI:
             with self.view.status(f"applico {new_config.spec}…"):
                 agent, gateway = self.agent_factory(new_config)
         except Exception as e:
-            self.view.error(e)
+            self.view.error(e, f"configurazione di {new_config.spec} (modello precedente mantenuto)")
             return
         self.agent, self.gateway = agent, gateway
         self.agent_name = new_config.model_id

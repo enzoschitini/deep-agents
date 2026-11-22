@@ -7,7 +7,10 @@ if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
 
 from deep_agents.agent import build_agent  # noqa: E402
+from rich.console import Console  # noqa: E402
+
 from deep_agents.cli import ChatCLI  # noqa: E402
+from deep_agents.cli.renderer import Renderer  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
 
 # Modelo inicial da CLI, no formato "provider:modelo". Durante o chat, digite "/" para ver os
@@ -26,7 +29,11 @@ MODEL = ModelConfig.from_spec(
 
 
 def chat_loop(model: ModelConfig = MODEL) -> None:
-    agent, gateway = build_agent(model)
+    try:
+        agent, gateway = build_agent(model)
+    except Exception as e:
+        Renderer(Console(), "startup").error(e, f"avvio: creazione dell'agente con {model.spec}")
+        sys.exit(1)
     ChatCLI(agent, gateway, agent_factory=build_agent).run()
 
 

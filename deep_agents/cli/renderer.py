@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import traceback
+from pathlib import Path
 from typing import Any
 
 from rich import box
@@ -37,6 +40,49 @@ def format_metrics(report: Any) -> str:
     return "[" + " | ".join(parts) + "]"
 
 
+def _cause_chain(error: BaseException) -> list[BaseException]:
+    """Exceções encadeadas (`raise ... from`/contexto implícito), da mais próxima à raiz."""
+    chain: list[BaseException] = []
+    seen = {id(error)}
+    current = error.__cause__ or error.__context__
+    while current is not None and id(current) not in seen:
+        chain.append(current)
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return chain
+
+
+def _origin(error: BaseException) -> str | None:
+    """Último frame do código do projeto (deep_agents) no traceback; senão o último frame qualquer."""
+    frames = traceback.extract_tb(error.__traceback__) if error.__traceback__ else []
+    if not frames:
+        return None
+    own = [f for f in frames if "deep_agents" in Path(f.filename).parts]
+    frame = (own or frames)[-1]
+    try:
+        shown = Path(frame.filename).resolve().relative_to(Path.cwd())
+    except ValueError:
+        shown = Path(frame.filename)
+    return f"{shown}:{frame.lineno} in {frame.name}()"
+
+
+def _hint(error: BaseException) -> str | None:
+    """Dica para os erros mais comuns (chave de API, timeout, modelo inexistente, rede)."""
+    names = " ".join(type(e).__name__ for e in [error, *_cause_chain(error)])
+    text = " ".join(str(e) for e in [error, *_cause_chain(error)]).lower()
+    if "AuthenticationError" in names or "api key" in text or "api_key" in text or "401" in text:
+        return "Controlla la chiave API del provider (variabile d'ambiente / .env)."
+    if "NotFoundError" in names or "model_not_found" in text or "does not exist" in text:
+        return "Il modello potrebbe non esistere o non essere accessibile: cambia con /modello."
+    if "RateLimitError" in names or "429" in text:
+        return "Limite di richieste/quota raggiunto: riprova tra poco o cambia modello."
+    if "Timeout" in names or "timed out" in text:
+        return "Timeout: riprova, oppure aumenta `timeout` in ModelConfig."
+    if "Connection" in names or "connect" in text:
+        return "Problema di rete: controlla la connessione/proxy."
+    return None
+
+
 class Renderer:
     """Desenha os elementos da conversa. Não conhece agente nem histórico."""
 
@@ -69,8 +115,39 @@ class Renderer:
         )
 
     # -- avisos
-    def error(self, error: Exception) -> None:
-        self._panel(Text(str(error)), "errore", ERROR_COLOR)
+    def error(self, error: BaseException, context: str | None = None) -> None:
+        """Erro em destaque: onde aconteceu (context), tipo, mensagem, causas e ponto de origem no código.
+        Com DEEP_AGENTS_DEBUG=1 mostra também o traceback completo."""
+        body = Text()
+        if context:
+            body.append("Dove: ", style=f"bold {ERROR_COLOR}")
+            body.append(f"{context}\n")
+        body.append("Tipo: ", style=f"bold {ERROR_COLOR}")
+        body.append(f"{type(error).__module__}.{type(error).__qualname__}\n")
+        body.append("Messaggio: ", style=f"bold {ERROR_COLOR}")
+        body.append(f"{str(error).strip() or '(nessun messaggio)'}\n")
+
+        for cause in _cause_chain(error):
+            body.append("Causa: ", style=f"bold {ERROR_COLOR}")
+            body.append(f"{type(cause).__qualname__}: {str(cause).strip() or '(nessun messaggio)'}\n")
+
+        origin = _origin(error)
+        if origin:
+            body.append("Origine: ", style=f"bold {ERROR_COLOR}")
+            body.append(origin, style=MUTED)
+            body.append("\n")
+
+        hint = _hint(error)
+        if hint:
+            body.append("\nSuggerimento: ", style="bold yellow")
+            body.append(hint)
+
+        body.rstrip()
+        self._panel(body, f"[bold {ERROR_COLOR}]✖ Errore[/]", ERROR_COLOR)
+        if os.environ.get("DEEP_AGENTS_DEBUG"):
+            self.console.print_exception(show_locals=False)
+        else:
+            self.console.print(f"  [{MUTED}]traceback completo: DEEP_AGENTS_DEBUG=1[/]")
         self.console.print()
 
     def notice(self, message: str) -> None:
