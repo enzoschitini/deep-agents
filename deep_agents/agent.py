@@ -46,6 +46,7 @@ class AgentBuilder:
         return {
             "system_prompt": self.prompts.system_prompt,
             "memory": self.prompts.memory_files,
+            "skills": self.prompts.skills,
             "backend": self.prompts.backend,
             "permissions": self.prompts.permissions,
         }

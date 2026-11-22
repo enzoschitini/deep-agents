@@ -37,7 +37,7 @@ agent.py  ──►  AgentBuilder
 | Recurso | Pasta | Classe principal | Método no `AgentBuilder` | O que a pasta contém |
 |---|---|---|---|---|
 | Modelo | `model/` | `LLMGateway` | `build_model()` | `model_config.py` (`ModelConfig`), `provider_rules.py` (regras por provedor), `metrics*.py` (tokens, latência, custo) |
-| Prompt | `prompts/` | `AgentPrompts` (`agent_prompts.py`) | `build_prompt()` | `system.py` (textos), `harness_profile.py` (perfil por modelo), `rules/*.md` (regras carregadas via `memory=`) |
+| Prompt | `prompts/` | `AgentPrompts` (`agent_prompts.py`) | `build_prompt()` | `system.py` (textos), `harness_profile.py` (perfil por modelo), `rules/*.md` (regras carregadas via `memory=`), `skills/<nome>/SKILL.md` (skills carregadas via `skills=`, lidas sob demanda) |
 | Ferramentas | — | ainda não existe | `build_tools()` | hoje devolve `[internet_search]` direto no `agent.py` (pendente de extrair, ver abaixo) |
 
 `AgentBuilder` (em `agent.py`):
@@ -96,7 +96,9 @@ Exemplo: ferramentas (o mesmo vale para memória de longo prazo, subagentes, ski
   por modelo. Qualquer recurso que dependa do `spec` do modelo deve ser (re)feito dentro do seu `build_*`, não no `__init__`
   de módulo.
 - **Nomes dos métodos de prompt**: `AgentPrompts` expõe `system_prompt`, `memory_files`, `backend`, `permissions` e
-  `register_harness`. O `build_prompt()` apenas os agrupa nos nomes de parâmetro do `create_deep_agent`
-  (`system_prompt`, `memory`, `backend`, `permissions`).
+  `skills`, `register_harness`. O `build_prompt()` apenas os agrupa nos nomes de parâmetro do `create_deep_agent`
+  (`system_prompt`, `memory`, `skills`, `backend`, `permissions`).
+- **Adicionar uma skill**: crie `prompts/skills/<nome>/SKILL.md` com frontmatter (`name`, `description`). Nenhum código
+  muda: `AgentPrompts.skills` aponta para a pasta inteira e o agente descobre as subpastas sozinho.
 - **Pendência conhecida**: `internet_search` ainda está definido direto em `agent.py`. Ao extraí-lo para `tools/`,
   este documento deixa de ter exceções.

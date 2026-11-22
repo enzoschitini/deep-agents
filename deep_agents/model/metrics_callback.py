@@ -144,6 +144,7 @@ class MetricsCallbackHandler(BaseCallbackHandler):
         with self._lock:
             self._tools[run_id] = {
                 "name": (serialized or {}).get("name") or kwargs.get("name"),
+                "input": str(kwargs.get("inputs") or input_str)[:300],
                 "t0": time.perf_counter(),
             }
 
@@ -153,6 +154,7 @@ class MetricsCallbackHandler(BaseCallbackHandler):
             if t:
                 self.report.tool_runs.append({
                     "name": t["name"],
+                    "input": t["input"],
                     "duration_s": round(time.perf_counter() - t["t0"], 4),
                     "error": error,
                 })

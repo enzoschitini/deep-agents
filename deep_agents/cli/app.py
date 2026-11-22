@@ -18,7 +18,7 @@ from deep_agents.cli.models import (
     resolve_choice,
 )
 from deep_agents.cli.prompt import ChatPrompt, SlashCompleter
-from deep_agents.cli.renderer import Renderer
+from deep_agents.cli.renderer import Renderer, skills_used
 from deep_agents.cli.theme import APP_NAME, APP_VERSION
 from deep_agents.utils.json_manager import extract_response_text, manage_result_json
 
@@ -108,6 +108,7 @@ class ChatCLI:
         # As mensagens retornadas já contêm todo o histórico + a nova resposta
         self.messages = result["messages"]
         manage_result_json(result)
+        self.view.skills(skills_used(report))
         self.view.agent_message(extract_response_text(result))
         self.view.metrics(report)
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import traceback
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,21 @@ from rich.table import Table
 from rich.text import Text
 
 from deep_agents.cli.theme import AGENT_COLOR, ERROR_COLOR, MUTED, USER_COLOR
+
+
+_SKILL_PATH = re.compile(r"/skills/([^/\s'\"]+)/SKILL\.md")
+
+
+def skills_used(report: Any) -> list[str]:
+    """Nomes das skills que o agente leu no turno (read_file em .../skills/<nome>/SKILL.md), sem repetição."""
+    names: list[str] = []
+    for run in report.tool_runs:
+        if run.get("name") != "read_file":
+            continue
+        match = _SKILL_PATH.search(run.get("input") or "")
+        if match and match.group(1) not in names:
+            names.append(match.group(1))
+    return names
 
 
 def format_metrics(report: Any) -> str:
@@ -101,6 +117,14 @@ class Renderer:
     def agent_message(self, text: str) -> None:
         self.console.print()
         self._panel(Markdown(text), f"[bold {AGENT_COLOR}]◆ {self.agent_name}[/]", AGENT_COLOR, padding=(1, 2))
+
+    def skills(self, names: list[str]) -> None:
+        """Avisa quais skills o agente usou neste turno (nada é desenhado se não houve nenhuma)."""
+        if not names:
+            return
+        self.console.print()
+        for name in names:
+            self.console.print(Text.assemble(("  ✦ skill in uso: ", f"bold {AGENT_COLOR}"), (name, "bold")))
 
     def metrics(self, report: Any) -> None:
         self.console.print(Text(f"  {format_metrics(report)}", style=MUTED))

@@ -3,6 +3,7 @@
 Esconde do agent.py onde ficam os arquivos e como são ligados ao Deep Agents:
   - system_prompt  → texto de system.py
   - memory_files   → caminhos virtuais dos .md de rules/ (parâmetro memory=)
+  - skills         → pasta skills/ (parâmetro skills=; o agente lê o SKILL.md sob demanda)
   - backend        → monta a pasta prompts/ em /prompts/ (somente leitura)
   - permissions    → nega escrita do agente em /prompts/**
   - register_harness → registra o HarnessProfile do modelo
@@ -24,6 +25,7 @@ _PROMPTS_DIR = Path(__file__).resolve().parent
 class AgentPrompts:
     MOUNT = "/prompts/"        # caminho virtual onde a pasta prompts/ aparece para o agente
     RULES_DIR = "rules"        # subpasta com os .md (ordem alfabética: 01_, 02_…)
+    SKILLS_DIR = "skills"      # subpasta com uma pasta por skill (<nome>/SKILL.md)
 
     def __init__(self, root: Path = _PROMPTS_DIR) -> None:
         self.root = root
@@ -37,6 +39,11 @@ class AgentPrompts:
         """Caminhos virtuais dos arquivos de regras, na ordem em que são carregados."""
         rules = sorted((self.root / self.RULES_DIR).glob("*.md"))
         return [f"{self.MOUNT}{self.RULES_DIR}/{p.name}" for p in rules]
+
+    @property
+    def skills(self) -> list[str]:
+        """Pastas-fonte de skills (cada subpasta com um SKILL.md), no caminho virtual."""
+        return [f"{self.MOUNT}{self.SKILLS_DIR}/"]
 
     @property
     def backend(self) -> CompositeBackend:
