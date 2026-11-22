@@ -14,8 +14,8 @@ from deepagents.middleware.filesystem import FilesystemPermission  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
-from deep_agents.system_prompt.harness_profile import HarnessProfiler  # noqa: E402
-from deep_agents.system_prompt.instructions.prompts import SYSTEM_PROMPT  # noqa: E402
+from deep_agents.prompts.harness_profile import HarnessProfiler  # noqa: E402
+from deep_agents.prompts.system import SYSTEM_PROMPT  # noqa: E402
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -23,11 +23,11 @@ load_dotenv()
 # OpenAI's built-in web search — no extra install or API key needed
 internet_search = {"type": "web_search"}
 
-# Pasta system_prompt/, montada no caminho virtual /system_prompt/ (somente leitura para o agente).
-# Cada .md em system_prompt/instructions/ é um arquivo de instruções separado (ordem alfabética: 01_, 02_…),
+# Pasta prompts/, montada no caminho virtual /prompts/ (somente leitura para o agente).
+# Cada .md em prompts/rules/ é um arquivo de regras separado (ordem alfabética: 01_, 02_…),
 # carregado pelo parâmetro memory= do Deep Agents.
-_PROMPT_DIR = Path(__file__).resolve().parent / "system_prompt"
-_MEMORY_FILES = [f"/system_prompt/instructions/{p.name}" for p in sorted((_PROMPT_DIR / "instructions").glob("*.md"))]
+_PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
+_MEMORY_FILES = [f"/prompts/rules/{p.name}" for p in sorted((_PROMPT_DIR / "rules").glob("*.md"))]
 
 def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
     """Create the agent for the given model.
@@ -44,8 +44,8 @@ def build_agent(config: ModelConfig) -> tuple[Any, LLMGateway]:
         memory=_MEMORY_FILES,
         backend=CompositeBackend(
             default=StateBackend(),
-            routes={"/system_prompt/": FilesystemBackend(root_dir=_PROMPT_DIR, virtual_mode=True)},
+            routes={"/prompts/": FilesystemBackend(root_dir=_PROMPT_DIR, virtual_mode=True)},
         ),
-        permissions=[FilesystemPermission(operations=["write"], paths=["/system_prompt/**"], mode="deny")],
+        permissions=[FilesystemPermission(operations=["write"], paths=["/prompts/**"], mode="deny")],
     )
     return agent, gateway

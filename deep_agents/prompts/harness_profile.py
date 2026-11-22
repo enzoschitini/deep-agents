@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, register_harness_profile
 from langchain.agents.middleware import AgentMiddleware
 
-from deep_agents.system_prompt.instructions.prompts import (
+from deep_agents.prompts.system import (
     HARNESS_BASE_PROMPT,
     HARNESS_SUFFIX_PROMPT,
     HARNESS_TOOL_DESCRIPTIONS,
@@ -28,7 +28,7 @@ class HarnessProfiler:
     @staticmethod
     def build() -> HarnessProfile:
         return HarnessProfile(
-            # Textos em instructions/prompts.py: BASE (após o system_prompt=) e SUFFIX (último bloco do prompt).
+            # Textos em system.py: BASE (após o system_prompt=) e SUFFIX (último bloco do prompt).
             base_system_prompt=HARNESS_BASE_PROMPT,
             system_prompt_suffix=HARNESS_SUFFIX_PROMPT,
             # Troca a descrição que o modelo lê de cada ferramenta (chave com nome errado = no-op silencioso).
