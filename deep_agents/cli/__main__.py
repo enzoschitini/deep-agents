@@ -39,6 +39,7 @@ TOOLKIT = {
 # Subagents que o agente principal pode chamar (tool `task`): {subagent: {"enabled": bool}}
 SUBAGENTS = {
     "pesquisador": {"enabled": True},
+    "redator": {"enabled": True},
 }
 
 
