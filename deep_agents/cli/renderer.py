@@ -210,6 +210,15 @@ class Renderer:
             table.add_row(str(i), m.spec, "● attuale" if is_current else "")
         self._panel(table, "Scegli il modello", AGENT_COLOR)
 
+    @staticmethod
+    def session_label(info: Any, is_current: bool) -> str:
+        """Uma linha do seletor de sessões: id · nº de mensagens · data · começo da primeira mensagem."""
+        preview = " ".join(info.preview.split())
+        if len(preview) > 50:
+            preview = preview[:49] + "…"
+        mark = "  ● attuale" if is_current else ""
+        return f"{info.id}  ·  {info.count} msg  ·  {info.updated_at[:10]}  ·  {preview}{mark}"
+
     def model_prompt(self) -> str:
         return self.console.input(f"[{MUTED}]numero o provider:modello (invio per annullare)[/] [bold {USER_COLOR}]❯[/] ")
 

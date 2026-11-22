@@ -11,6 +11,7 @@ from rich.console import Console  # noqa: E402
 
 from deep_agents.cli import ChatCLI  # noqa: E402
 from deep_agents.cli.renderer import Renderer  # noqa: E402
+from deep_agents.memory.build_memory import MemoryBuilder  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
 
 # Modelo inicial da CLI, no formato "provider:modelo". Durante o chat, digite "/" para ver os
@@ -28,18 +29,19 @@ MODEL = ModelConfig.from_spec(
 )
 
 
-def create_agent(config: ModelConfig):
-    """Fábrica usada no início e a cada troca de modelo/temperatura/thinking (/modello…)."""
-    return AgentBuilder(config).build()
-
-
 def chat_loop(model: ModelConfig = MODEL) -> None:
+    memory = MemoryBuilder()  # sessão nova e vazia a cada execução; só a CLI a usa (o agente não acessa a memória)
+
+    def create_agent(config: ModelConfig):
+        """Fábrica usada no início e a cada troca de modelo/temperatura/thinking (/modello…)."""
+        return AgentBuilder(config).build()
+
     try:
         agent, gateway = create_agent(model)
     except Exception as e:
         Renderer(Console(), "startup").error(e, f"avvio: creazione dell'agente con {model.spec}")
         sys.exit(1)
-    ChatCLI(agent, gateway, agent_factory=create_agent).run()
+    ChatCLI(agent, gateway, agent_factory=create_agent, memory=memory).run()
 
 
 # python -m deep_agents.cli

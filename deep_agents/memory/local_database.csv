@@ -1,0 +1,7 @@
+id,session_id,role,content,created_at
+12d8c204,20261122-100917,human,Olá! Meu nome é Laura?,2026-11-22T13:09:36+00:00
+ebcb0f44,20261122-100917,ai,Olá! Laura é o meu nome; você ainda não me disse o seu. Como gostaria de ser chamado ou chamada?,2026-11-22T13:09:36+00:00
+48f22052,20261122-100917,human,o meu é Silvia,2026-11-22T13:10:07+00:00
+4469fad4,20261122-100917,ai,"Prazer, Silvia! Eu sou a Laura.",2026-11-22T13:10:07+00:00
+38749b54,20261122-101022,human,Qual meu nome?,2026-11-22T13:10:31+00:00
+3b5fc379,20261122-101022,ai,Você ainda não me informou seu nome.,2026-11-22T13:10:31+00:00

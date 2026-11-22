@@ -40,12 +40,15 @@ class Banner:
         self.name = name
         self.version = version
         self.agent_name = agent_name
+        self.session: tuple[str, int] | None = None  # (id da sessão, nº de mensagens); None = sem memória
 
     def render(self, console: Console) -> None:
         console.print()
         console.print(Align.center(self._title(console.width)))
         console.print()
         console.print(Align.center(self._info()))
+        if self.session is not None:
+            console.print(Align.center(self._session_line()))
         console.print(Align.center(self._hint()))
         console.print()
 
@@ -78,10 +81,19 @@ class Banner:
         info.append(self.agent_name, style=f"bold {AGENT_COLOR}")
         return info
 
+    def _session_line(self) -> Text:
+        session_id, count = self.session
+        line = Text(justify="center")
+        line.append("sessione: ", style=MUTED)
+        line.append(session_id, style=f"bold {AGENT_COLOR}")
+        line.append("   •   ", style=MUTED)
+        line.append(f"{count} {'messaggio' if count == 1 else 'messaggi'}", style="bold white")
+        return line
+
     @staticmethod
     def _hint() -> Text:
         return Text(
-            "scrivi il tuo messaggio  •  /aiuto per i comandi  •  /esci per uscire",
+            "scrivi il tuo messaggio  •  /aiuto per i comandi  •  /sessioni per riprendere una sessione  •  /esci per uscire",
             style=MUTED,
             justify="center",
         )

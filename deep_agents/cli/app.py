@@ -42,16 +42,20 @@ class ChatCLI:
         console: Console | None = None,
         agent_factory: Callable[[Any], tuple[Any, Any]] | None = None,
         models: list | None = None,
+        memory: Any | None = None,
     ) -> None:
-        """`agent_factory(model_config) -> (agent, gateway)` habilita o comando /modello."""
+        """`agent_factory(model_config) -> (agent, gateway)` habilita o comando /modello.
+        `memory` (um `MemoryBuilder`) habilita as sessões: grava cada turno e o comando /sessioni."""
         self.agent = agent
         self.gateway = gateway
         self.agent_factory = agent_factory
+        self.memory = memory
         self.models = models if models is not None else AVAILABLE_MODELS
         self.agent_name = agent_name or getattr(gateway.config, "model_id", "agent")
         self.console = console or Console()
         self.banner = Banner(name, version, self.agent_name)
         self.view = Renderer(self.console, self.agent_name)
+        self._refresh_session()
         self.commands = self._build_commands()
         self.prompt = ChatPrompt(
             self.console,
@@ -61,6 +65,7 @@ class ChatCLI:
                     "/modello": lambda: [m.spec for m in self.models],
                     "/temperatura": lambda: ["default"] + [f"{v:.1f}" for _, v in TEMPERATURES if v is not None],
                     "/thinking": lambda: ["default", "off", "low", "medium", "high"],
+                    "/sessioni": lambda: [s.id for s in self.memory.sessions()] if self.memory else [],
                 },
             ),
         )
@@ -109,14 +114,76 @@ class ChatCLI:
         self.messages = result["messages"]
         manage_result_json(result)
         self.view.skills(skills_used(report))
-        self.view.agent_message(extract_response_text(result))
+        answer = extract_response_text(result)
+        self.view.agent_message(answer)
         self.view.metrics(report)
+        self._save_turn(text, answer)
+
+    # ----------------------------------------------------------------- sessões
+    def _refresh_session(self) -> None:
+        """Atualiza no banner o ID da sessão atual e o número de mensagens."""
+        if self.memory is not None:
+            self.banner.session = (self.memory.session_id, self.memory.message_count())
+
+    def _save_turn(self, user_text: str, answer: str) -> None:
+        """Grava o turno na sessão atual. Uma falha ao gravar não derruba o chat: só avisa."""
+        if self.memory is None:
+            return
+        try:
+            self.memory.record_turn(user_text, answer)
+            self._refresh_session()
+        except Exception as e:
+            self.view.error(e, f"salvataggio del messaggio nella sessione {self.memory.session_id}")
+
+    def _cmd_sessions(self, args: str = "") -> None:
+        """`/sessioni` abre a lista; `/sessioni <id>` retoma direto. A conversa continua com o contexto salvo."""
+        sessions = self.memory.sessions()
+        if not sessions:
+            self.view.notice("Nessuna sessione salvata.")
+            return
+        if args:
+            chosen = next((s for s in sessions if s.id == args.strip()), None)
+        else:
+            labels = [self.view.session_label(s, s.id == self.memory.session_id) for s in sessions]
+            current = next((i for i, s in enumerate(sessions) if s.id == self.memory.session_id), 0)
+            picked = self._pick_setting("Sessione", labels, current)
+            if picked is None:
+                self.view.notice("Nessuna modifica.")
+                return
+            chosen = sessions[picked]
+        if chosen is None:
+            self.view.notice("Sessione non trovata (usa /sessioni per vedere l'elenco).")
+            return
+        if chosen.id == self.memory.session_id:
+            self.view.notice("È già la sessione in uso.")
+            return
+        self.memory.resume(chosen.id)
+        self.messages = self.memory.history()
+        self._redraw()
+        for message in self.messages:  # mostra a conversa anterior para dar contexto visual
+            if message["role"] == "user":
+                self.view.user_message(message["content"])
+            else:
+                self.view.agent_message(message["content"])
+        self.view.notice(f"Sessione {chosen.id} ripresa: {len(self.messages)} messaggi (la conversazione continua)")
+
+    def _redraw(self) -> None:
+        """Limpa a tela e redesenha o banner (com a sessão atual)."""
+        self._refresh_session()
+        self.console.clear()
+        self.banner.render(self.console)
 
     # --------------------------------------------------------------- comandos
     def _build_commands(self) -> CommandRegistry:
         registry = CommandRegistry()
         registry.register(Command("/aiuto", "mostra questo aiuto", self._cmd_help, ("/help",)))
-        registry.register(Command("/pulisci", "cancella la conversazione e lo schermo", self._cmd_clear, ("/clear",)))
+        registry.register(
+            Command("/pulisci", "inizia una nuova sessione vuota (e pulisce lo schermo)", self._cmd_clear, ("/clear",))
+        )
+        if self.memory is not None:
+            registry.register(
+                Command("/sessioni", "riprendi una sessione precedente (anche: /sessioni <id>)", self._cmd_sessions, ("/sessions",))
+            )
         registry.register(Command("/metriche", "totali accumulati della sessione", self._cmd_metrics, ("/metrics",)))
         registry.register(
             Command("/esci", "termina la chat (anche: /exit, /quit)", self._cmd_exit, ("/exit", "/quit", "exit", "quit"))
@@ -132,9 +199,10 @@ class ChatCLI:
 
     def _cmd_clear(self, args: str = "") -> None:
         self.messages = []
-        self.console.clear()
-        self.banner.render(self.console)
-        self.view.notice("Cronologia cancellata.")
+        if self.memory is not None:
+            self.memory.new_session()  # a sessão anterior continua salva e pode ser retomada com /sessioni
+        self._redraw()
+        self.view.notice("Nuova sessione iniziata." if self.memory is not None else "Cronologia cancellata.")
 
     def _cmd_metrics(self, args: str = "") -> None:
         self.view.totals_table(self.gateway.totals())
