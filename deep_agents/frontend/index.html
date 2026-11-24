@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deep Agents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar" aria-label="Cronologia">
+      <div class="side-top">
+        <div class="brand">
+          <span class="logo" aria-hidden="true"></span>
+          <span class="brand-name">Deep Agents</span>
+        </div>
+        <button class="icon-btn only-mobile" id="closeSide" aria-label="Chiudi menu">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <button class="new-chat" id="newChat">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nuova chat
+      </button>
+      <nav class="history" id="history" aria-label="Chat recenti"></nav>
+      <div class="side-foot">
+        <span class="avatar-user">E</span>
+        <div>
+          <div class="who">Enzo</div>
+          <div class="plan">Ambiente demo</div>
+        </div>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn only-mobile" id="openSide" aria-label="Apri menu">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <div class="model">
+          <span class="dot"></span> Agente principale
+          <span class="muted">con 2 subagent</span>
+        </div>
+      </header>
+
+      <section class="scroll" id="scroll">
+        <div class="thread" id="thread"></div>
+      </section>
+
+      <footer class="composer-wrap">
+        <form class="composer" id="form">
+          <textarea id="input" rows="1" placeholder="Scrivi un messaggio per l'agente" aria-label="Messaggio"></textarea>
+          <div class="composer-row">
+            <span class="hint">Invio per inviare, Maiusc+Invio per andare a capo</span>
+            <button type="submit" class="send" id="send" aria-label="Invia" disabled>
+              <svg viewBox="0 0 24 24" class="i-send"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              <svg viewBox="0 0 24 24" class="i-stop"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+            </button>
+          </div>
+        </form>
+        <p class="disclaimer">Interfaccia dimostrativa: le risposte sono simulate e non c'è nessun backend collegato.</p>
+      </footer>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
