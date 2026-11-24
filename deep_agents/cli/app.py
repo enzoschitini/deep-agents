@@ -103,10 +103,14 @@ class ChatCLI:
     def _send(self, text: str) -> None:
         self.messages.append({"role": "user", "content": text})
         turn = self.channel.begin_turn() if self.channel is not None else None
+        dynamic: dict = {}   # estado do feedback ao vivo dos subagents dinâmicos neste turno
         try:
             with self.view.status():
                 # Cópia: o LangGraph converte, no lugar, os itens da lista recebida em objetos de mensagem.
-                result, report = self.gateway.run_agent(self.agent, {"messages": list(self.messages)})
+                result, report = self.gateway.run_agent(
+                    self.agent, {"messages": list(self.messages)},
+                    on_event=lambda event: self.view.dynamic_event(event, dynamic),
+                )
         except KeyboardInterrupt:
             self.messages.pop()
             self.view.notice("\nRisposta interrotta.")
@@ -119,7 +123,7 @@ class ChatCLI:
         manage_result_json(result)   # o resultado completo do turno (com as tools) fica no JSON
         self.view.skills(skills_used(report))
         self.view.subagents(subagents_used(report, self.tool_names))
-        self.view.tools(tools_used(report, self.tool_names))
+        self.view.tools(tools_used(report, self.tool_names | {"eval"}))   # `eval` = REPL dos subagents dinâmicos
         answer = extract_response_text(result)
         self._remember(answer)
         self.view.agent_message(answer)

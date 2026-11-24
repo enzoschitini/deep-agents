@@ -206,6 +206,34 @@ class Renderer:
             for run in d["tools"]:
                 self.console.print(self._tool_line(run, indent="      "))
 
+    def dynamic_event(self, event: Any, state: dict[str, Any]) -> None:
+        """Feedback ao vivo dos subagents dinâmicos (despachados com `task()` dentro do `eval`), um evento por vez.
+        `state` é por turno: {"active": {id: subagent}, "total": n}. O `id` se repete se o eval for reexecutado."""
+        if not isinstance(event, dict) or event.get("type") != "subagent":
+            return
+        active: dict[str, str] = state.setdefault("active", {})
+        sid, phase = event.get("id"), event.get("phase")
+        if phase == "start":
+            if sid in active:
+                return
+            if not state.get("total"):
+                self.console.print(Text("  ⟳ workflow dinamico: il codice (eval) orchestra i subagent", style=f"bold {AGENT_COLOR}"))
+            state["total"] = state.get("total", 0) + 1
+            active[sid] = event.get("subagent_type", "?")
+            task = " ".join(str(event.get("label") or event.get("description") or "").split())
+            line = Text.assemble(("  ▶ subagent avviato: ", f"bold {AGENT_COLOR}"), (active[sid], "bold"))
+            line.append(f"  «{task[:90]}»" if task else "", style=MUTED)
+            line.append(f"  [{len(active)} in corso]", style=MUTED)
+            self.console.print(line)
+        elif phase in {"complete", "error"}:
+            name = active.pop(sid, "?")
+            secs = (event.get("duration_ms") or 0) / 1000
+            if phase == "complete":
+                line = Text.assemble(("  ✔ subagent completato: ", f"bold {AGENT_COLOR}"), (name, "bold"), (f"  ({secs:.1f}s)  [{len(active)} in corso]", MUTED))
+            else:
+                line = Text.assemble(("  ✖ subagent in errore: ", f"bold {ERROR_COLOR}"), (name, "bold"), (f"  ({secs:.1f}s)  {str(event.get('error', ''))[:160]}", MUTED))
+            self.console.print(line)
+
     @staticmethod
     def _tool_line(run: dict[str, Any], indent: str = "  ") -> Text:
         line = Text.assemble((f"{indent}⚙ strumento in uso: ", f"bold {AGENT_COLOR}"), (run["name"], "bold"))

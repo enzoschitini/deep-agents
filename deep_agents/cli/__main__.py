@@ -42,6 +42,11 @@ SUBAGENTS = {
     "redator": {"enabled": True},
 }
 
+# Subagents dinâmicos: o principal ganha a tool `eval` (REPL JavaScript) e despacha os subagents acima com `task()`
+# em loops/Promise.all (lotes, votação, torneio). Só é usado quando o pedido contém "workflow" (ver rules/09_workflow.md).
+# "max_concurrency": None = padrão de `config.DYNAMIC_MAX_CONCURRENCY`.
+DYNAMIC_SUBAGENTS = {"enabled": True, "max_concurrency": None}
+
 
 def chat_loop(model: ModelConfig = MODEL) -> None:
     memory = MemoryBuilder()  # sessão nova e vazia a cada execução; compartilhada com o agente (resumo de contexto) entre as reconstruções
@@ -53,7 +58,7 @@ def chat_loop(model: ModelConfig = MODEL) -> None:
 
     def create_agent(config: ModelConfig):
         """Fábrica usada no início e a cada troca de modelo/temperatura/thinking (/modello…)."""
-        return AgentBuilder(config, memory=memory, toolkit=toolkit, subagents=subagents).build()
+        return AgentBuilder(config, memory=memory, toolkit=toolkit, subagents=subagents, dynamic=DYNAMIC_SUBAGENTS).build()
 
     try:
         agent, gateway = create_agent(model)

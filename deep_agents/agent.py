@@ -11,7 +11,8 @@ from typing import Any  # noqa: E402
 from deepagents import create_deep_agent  # noqa: E402
 from langchain.agents.middleware import ModelCallLimitMiddleware  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402
-from deep_agents.config import MODEL_CALL_LIMIT  # noqa: E402
+from langchain_quickjs import CodeInterpreterMiddleware  # noqa: E402
+from deep_agents.config import DYNAMIC_MAX_CONCURRENCY, MODEL_CALL_LIMIT  # noqa: E402
 from deep_agents.memory.build_memory import MemoryBuilder  # noqa: E402
 from deep_agents.model.llm_gateway import LLMGateway  # noqa: E402
 from deep_agents.model.model_config import ModelConfig  # noqa: E402
@@ -40,10 +41,13 @@ class AgentBuilder:
         memory: MemoryBuilder | None = None,
         toolkit: ToolkitBuilder | None = None,
         subagents: SubagentBuilder | None = None,
+        dynamic: dict[str, Any] | None = None,
     ) -> None:
         """`memory` e `toolkit` permitem à CLI compartilhar a mesma memória/sessão e o mesmo canal lateral
-        entre as reconstruções do agente."""
+        entre as reconstruções do agente. `dynamic` liga os subagents dinâmicos: `{"enabled": bool, "max_concurrency": int}`
+        (None/desligado = só a tool `task` normal)."""
         self.config = config
+        self.dynamic = dynamic or {}
         self.gateway = LLMGateway(config)
         self.prompts = AgentPrompts()
         self.memory = memory or MemoryBuilder()
@@ -73,6 +77,13 @@ class AgentBuilder:
         """Subagents habilitados, cada um com as tools (grupos da toolkit, ex.: tavily) que declarou; as publicações vão ao mesmo canal lateral."""
         return self.subagents.build(self.build_model(), self.toolkit)
 
+    def build_dynamic(self) -> list[Any]:
+        """Subagents dinâmicos: o middleware que dá ao principal a tool `eval` (REPL JavaScript), de dentro da qual ele
+        despacha os subagents registrados com `task()` em loops/`Promise.all`. Sem `ptc`: o código não enxerga as tools do agente."""
+        if not self.dynamic.get("enabled", False):
+            return []
+        return [CodeInterpreterMiddleware(subagents=True, max_subagent_concurrency=self.dynamic.get("max_concurrency") or DYNAMIC_MAX_CONCURRENCY)]
+
     def build_memory(self) -> dict[str, Any]:
         """Argumentos de memória do `create_deep_agent`: o middleware que resume o contexto da conversa."""
         summarizer = self.memory.summarization(self.build_model(), self.prompts.backend)
@@ -84,6 +95,10 @@ class AgentBuilder:
             tools=self.build_tools(),
             subagents=self.build_subagents(),
             **self.build_prompt(),
-            **self.build_memory(),
+            **self._with_dynamic(self.build_memory()),
         )
         return agent, self.gateway
+
+    def _with_dynamic(self, memory_args: dict[str, Any]) -> dict[str, Any]:
+        """Acrescenta o middleware dos subagents dinâmicos (se ligado) aos do `build_memory`."""
+        return {**memory_args, "middleware": [*memory_args["middleware"], *self.build_dynamic()]}
