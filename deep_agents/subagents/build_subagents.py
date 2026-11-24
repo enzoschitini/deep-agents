@@ -2,11 +2,11 @@
 from typing import Any
 
 from deep_agents.subagents.base import SubagentDef
-from deep_agents.subagents.researcher import ResearcherSubagent
-from deep_agents.subagents.writer import WriterSubagent
+from deep_agents.subagents.agents.researcher import ResearcherSubagent
+from deep_agents.subagents.agents.writer import WriterSubagent
 from deep_agents.toolkit.build_toolkit import ToolkitBuilder
 
-# Subagents disponíveis (nome → classe). Um novo (ex.: verificador.py) entra aqui.
+# Subagents disponíveis (nome → classe). Um novo (ex.: agents/verificador.py) entra aqui.
 DEFAULT_SUBAGENTS: dict[str, type[SubagentDef]] = {
     ResearcherSubagent.name: ResearcherSubagent,
     WriterSubagent.name: WriterSubagent,

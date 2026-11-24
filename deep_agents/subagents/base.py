@@ -1,4 +1,4 @@
-"""Contrato dos subagents: um arquivo em `subagents/` = um papel = uma subclasse de `SubagentDef`."""
+"""Contrato dos subagents: um arquivo em `subagents/agents/` = um papel = uma subclasse de `SubagentDef`."""
 from typing import Any, Callable
 
 from langchain.agents import create_agent
