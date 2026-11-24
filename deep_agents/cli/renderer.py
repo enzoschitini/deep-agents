@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import ast
 import os
-import re
 import traceback
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from rich import box
 from rich.console import Console
@@ -17,77 +15,19 @@ from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
+from deep_agents.cli.live_turn import LiveTurn
 from deep_agents.cli.theme import AGENT_COLOR, ERROR_COLOR, MUTED, USER_COLOR
 
 
-_SKILL_PATH = re.compile(r"/skills/([^/\s'\"]+)/SKILL\.md")
+def _stat(stats: Any, name: str, default: int = 0) -> int:
+    """Lê um campo do `RunStats` (objeto) ou do seu `to_dict()` (vem assim no RUN END)."""
+    value = stats.get(name, default) if isinstance(stats, dict) else getattr(stats, name, default)
+    return value or 0
 
 
-def skills_used(report: Any) -> list[str]:
-    """Nomes das skills que o agente leu no turno (read_file em .../skills/<nome>/SKILL.md), sem repetição."""
-    names: list[str] = []
-    for run in report.tool_runs:
-        if run.get("name") != "read_file":
-            continue
-        match = _SKILL_PATH.search(run.get("input") or "")
-        if match and match.group(1) not in names:
-            names.append(match.group(1))
-    return names
-
-
-# Resumo personalizado por tool: recebe os argumentos da chamada e devolve o texto mostrado ao lado do nome.
-TOOL_SUMMARIES: dict[str, Callable[[dict], str]] = {
-    "internet_search": lambda args: f"«{args['query']}»" if args.get("query") else "",
-}
-
-
-def _args(run: dict[str, Any]) -> dict[str, Any]:
-    """Argumentos da chamada (o `input` do relatório é o str() do dict); {} se truncado ou fora do formato."""
-    try:
-        args = ast.literal_eval(run.get("input") or "")
-    except (ValueError, SyntaxError):
-        return {}
-    return args if isinstance(args, dict) else {}
-
-
-def _tool_row(run: dict[str, Any]) -> dict[str, Any]:
-    name = run.get("name")
-    try:
-        summary = TOOL_SUMMARIES.get(name, lambda a: "")(_args(run))
-    except KeyError:
-        summary = ""
-    return {"name": name, "summary": summary, "duration_s": run.get("duration_s"), "error": run.get("error")}
-
-
-def tools_used(report: Any, names: set[str]) -> list[dict[str, Any]]:
-    """Execuções (em ordem) das tools do agente principal cujo nome está em `names`: {name, summary, duration_s, error}.
-    As que rodaram dentro de um subagent ficam de fora: aparecem sob ele (ver `subagents_used`)."""
-    return [_tool_row(run) for run in report.tool_runs if run.get("name") in names and not run.get("subagent_run")]
-
-
-def subagents_used(report: Any, names: set[str]) -> list[dict[str, Any]]:
-    """Delegações do turno (cada chamada da tool `task`), em ordem: {subagent, task, duration_s, error, tools}.
-    `tools` são as execuções (cujo nome está em `names`) que aquele subagent fez."""
-    delegations: list[dict[str, Any]] = []
-    for run in report.tool_runs:
-        if run.get("name") != "task":
-            continue
-        args = _args(run)
-        text = " ".join(str(args.get("description", "")).split())
-        delegations.append({
-            "subagent": args.get("subagent_type") or "?",
-            "task": text if len(text) <= 110 else text[:109] + "…",
-            "duration_s": run.get("duration_s"),
-            "error": run.get("error"),
-            "tools": [
-                _tool_row(r) for r in report.tool_runs if r.get("subagent_run") == run.get("id") and r.get("name") in names
-            ],
-        })
-    return delegations
-
-
-def format_metrics(report: Any) -> str:
-    """Uma linha compacta: sempre token in/out + tempo; extras só quando relevantes."""
+def format_metrics(report: Any, stats: Any = None) -> str:
+    """Uma linha compacta: sempre token in/out + tempo; extras só quando relevantes.
+    `stats` (RunStats ou dict) dá o nº de tools/subagents; sem ele usa `report.tool_runs` (retrocompatível)."""
     parts = [
         f"token in: {report.input_tokens}",
         f"out: {report.output_tokens}",
@@ -99,9 +39,14 @@ def format_metrics(report: Any) -> str:
         parts.append(f"reasoning: {report.reasoning_tokens}")
     if report.cache_read_tokens:
         parts.append(f"cache: {report.cache_read_tokens}")
-    if report.tool_runs:
-        parts.append(f"strumenti: {len(report.tool_runs)}")
-    n_subagents = sum(1 for run in report.tool_runs if run.get("name") == "task")
+    if stats is not None:
+        n_tools = _stat(stats, "n_tools")
+        n_subagents = _stat(stats, "n_subagents") + _stat(stats, "n_dynamic_subagents")
+    else:
+        n_tools = len(report.tool_runs)
+        n_subagents = sum(1 for run in report.tool_runs if run.get("name") == "task")
+    if n_tools:
+        parts.append(f"strumenti: {n_tools}")
     if n_subagents:
         parts.append(f"subagent: {n_subagents}")
     if report.cost_usd is not None:
@@ -169,91 +114,29 @@ class Renderer:
         """Mostra un messaggio dell'utente (utile per rivedere la cronologia)."""
         self._panel(Text(text), f"[bold {USER_COLOR}]Tu[/]", USER_COLOR)
 
+    def agent_panel(self, text: str) -> Panel:
+        """Painel da resposta do agente (também usado ao vivo, durante o streaming)."""
+        return Panel(
+            Markdown(text), title=f"[bold {AGENT_COLOR}]◆ {self.agent_name}[/]", title_align="left",
+            border_style=AGENT_COLOR, box=box.ROUNDED, padding=(1, 2),
+        )
+
     def agent_message(self, text: str) -> None:
         self.console.print()
-        self._panel(Markdown(text), f"[bold {AGENT_COLOR}]◆ {self.agent_name}[/]", AGENT_COLOR, padding=(1, 2))
+        self.console.print(self.agent_panel(text))
 
-    def skills(self, names: list[str]) -> None:
-        """Avisa quais skills o agente usou neste turno (nada é desenhado se não houve nenhuma)."""
-        if not names:
-            return
-        self.console.print()
-        for name in names:
-            self.console.print(Text.assemble(("  ✦ skill in uso: ", f"bold {AGENT_COLOR}"), (name, "bold")))
+    def live_turn(self, verbosity: str = "off") -> LiveTurn:
+        """Desenho ao vivo de um turno (context manager); alimentado com os `StreamEvent` do agente."""
+        return LiveTurn(self, verbosity)
 
-    def tools(self, runs: list[dict[str, Any]]) -> None:
-        """Uma linha por tool da toolkit usada no turno (nada é desenhado se não houve nenhuma)."""
-        if not runs:
-            return
-        self.console.print()
-        for run in runs:
-            self.console.print(self._tool_line(run))
-
-    def subagents(self, delegations: list[dict[str, Any]]) -> None:
-        """Uma linha por subagent chamado no turno, com as tools que ele usou logo abaixo (nada se não houve nenhum)."""
-        if not delegations:
-            return
-        self.console.print()
-        for d in delegations:
-            line = Text.assemble(("  ◈ subagent chiamato: ", f"bold {AGENT_COLOR}"), (d["subagent"], "bold"))
-            if d["task"]:
-                line.append(f"  «{d['task']}»", style=MUTED)
-            if d["duration_s"] is not None:
-                line.append(f"  ({d['duration_s']:.1f}s)", style=MUTED)
-            if d["error"]:
-                line.append(f"  ✖ {d['error']}", style=f"bold {ERROR_COLOR}")
-            self.console.print(line)
-            for run in d["tools"]:
-                self.console.print(self._tool_line(run, indent="      "))
-
-    def dynamic_event(self, event: Any, state: dict[str, Any]) -> None:
-        """Feedback ao vivo dos subagents dinâmicos (despachados com `task()` dentro do `eval`), um evento por vez.
-        `state` é por turno: {"active": {id: subagent}, "total": n}. O `id` se repete se o eval for reexecutado."""
-        if not isinstance(event, dict) or event.get("type") != "subagent":
-            return
-        active: dict[str, str] = state.setdefault("active", {})
-        sid, phase = event.get("id"), event.get("phase")
-        if phase == "start":
-            if sid in active:
-                return
-            if not state.get("total"):
-                self.console.print(Text("  ⟳ workflow dinamico: il codice (eval) orchestra i subagent", style=f"bold {AGENT_COLOR}"))
-            state["total"] = state.get("total", 0) + 1
-            active[sid] = event.get("subagent_type", "?")
-            task = " ".join(str(event.get("label") or event.get("description") or "").split())
-            line = Text.assemble(("  ▶ subagent avviato: ", f"bold {AGENT_COLOR}"), (active[sid], "bold"))
-            line.append(f"  «{task[:90]}»" if task else "", style=MUTED)
-            line.append(f"  [{len(active)} in corso]", style=MUTED)
-            self.console.print(line)
-        elif phase in {"complete", "error"}:
-            name = active.pop(sid, "?")
-            secs = (event.get("duration_ms") or 0) / 1000
-            if phase == "complete":
-                line = Text.assemble(("  ✔ subagent completato: ", f"bold {AGENT_COLOR}"), (name, "bold"), (f"  ({secs:.1f}s)  [{len(active)} in corso]", MUTED))
-            else:
-                line = Text.assemble(("  ✖ subagent in errore: ", f"bold {ERROR_COLOR}"), (name, "bold"), (f"  ({secs:.1f}s)  {str(event.get('error', ''))[:160]}", MUTED))
-            self.console.print(line)
-
-    @staticmethod
-    def _tool_line(run: dict[str, Any], indent: str = "  ") -> Text:
-        line = Text.assemble((f"{indent}⚙ strumento in uso: ", f"bold {AGENT_COLOR}"), (run["name"], "bold"))
-        if run["summary"]:
-            line.append(f"  {run['summary']}", style=MUTED)
-        if run["duration_s"] is not None:
-            line.append(f"  ({run['duration_s']:.1f}s)", style=MUTED)
-        if run["error"]:
-            line.append(f"  ✖ {run['error']}", style=f"bold {ERROR_COLOR}")
-        return line
-
-    def sources(self, publications: list[Any]) -> None:
-        """Seção "Fonti": sites publicados no canal lateral (kind="sources") neste turno, sem repetir URLs."""
+    def sources(self, sources: list[dict[str, Any]]) -> None:
+        """Seção "Fonti": sites do turno (canal lateral, já deduplicados; repetições de URL são ignoradas mesmo assim)."""
         seen: set[str] = set()
         rows: list[dict[str, str]] = []
-        for pub in publications:
-            for item in pub.payload:
-                if item["url"] not in seen:
-                    seen.add(item["url"])
-                    rows.append(item)
+        for item in sources:
+            if item.get("url") not in seen:
+                seen.add(item.get("url"))
+                rows.append(item)
         if not rows:
             return
         table = Table(box=None, show_header=False, padding=(0, 2))
@@ -266,8 +149,11 @@ class Renderer:
             table.add_row(str(i), cell)
         self._panel(table, f"[bold {AGENT_COLOR}]Fonti[/] [{MUTED}]({len(rows)})[/]", MUTED)
 
-    def metrics(self, report: Any) -> None:
-        self.console.print(Text(f"  {format_metrics(report)}", style=MUTED))
+    def metrics(self, report: Any, stats: Any = None) -> None:
+        self.metrics_line(format_metrics(report, stats))
+
+    def metrics_line(self, line: str) -> None:
+        self.console.print(Text(f"  {line}", style=MUTED))
         self.console.print()
 
     def status(self, message: str | None = None):

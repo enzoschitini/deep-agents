@@ -256,6 +256,29 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .step .state .icon { width: 15px; height: 15px; stroke-width: 2; }
 .step .state .ok { color: var(--ok); }
 .step .state .bad { color: var(--err); }
+/* Albero delle attività: i figli (tool di un subagent, subagent dinamici di un eval) sono annidati per parent_id */
+.act { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 100%; }
+.act > .children { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 100%; margin-left: 14px; padding-left: 10px; border-left: 1px solid var(--border-strong); }
+.act > .children:empty { display: none; }
+.step .dur { font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); flex: none; }
+.step .dur:empty { display: none; }
+/* SECONDARY solo con "Dettagli" attivo; DEBUG arriva solo con ?debug=1. I figli restano visibili anche se la riga del padre è nascosta. */
+body:not(.show-details) .act[data-vis="secondary"] > .step,
+body:not(.show-details) .fold[data-vis="secondary"] { display: none; }
+body:not(.show-details) .act[data-vis="secondary"] > .children { margin-left: 0; padding-left: 0; border-left: 0; }
+.fold { max-width: min(100%, 760px); width: 100%; font-size: 13px; color: var(--text-muted); }
+.fold summary { cursor: pointer; list-style: none; padding: 2px 4px; border-radius: var(--r-md); width: fit-content; }
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary::before { content: "\25B8"; display: inline-block; margin-right: 6px; transition: transform .12s; }
+.fold[open] summary::before { transform: rotate(90deg); }
+.fold summary:hover { color: var(--text); background: var(--bg-control-hover); }
+.fold-body { margin: 4px 0 4px 6px; padding: 6px 12px; border-left: 2px solid var(--border-strong); max-height: 320px; overflow: auto; white-space: pre-wrap; }
+.fold-body.md { white-space: normal; }
+.fold.reasoning .fold-body { font-style: italic; }
+.header-right { display: flex; align-items: center; gap: 8px; position: relative; }
+.details-toggle { height: 26px; padding: 0 10px; border-radius: var(--r-pill); font-size: 12.5px; color: var(--text-muted); border: 1px solid var(--border); background: transparent; }
+.details-toggle:hover { color: var(--text); background: var(--bg-control-hover); }
+.details-toggle[aria-pressed="true"] { color: var(--text); background: var(--bg-control-active); border-color: var(--border-strong); }
 .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid #ffffff26; border-top-color: var(--text); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 

@@ -18,9 +18,11 @@ from deep_agents.cli.models import (
     resolve_choice,
 )
 from deep_agents.cli.prompt import ChatPrompt, SlashCompleter
-from deep_agents.cli.renderer import Renderer, skills_used, subagents_used, tools_used
+from deep_agents.cli.live_turn import VERBOSITY_LEVELS
+from deep_agents.cli.renderer import Renderer
 from deep_agents.cli.theme import APP_NAME, APP_VERSION
-from deep_agents.utils.json_manager import extract_response_text, manage_result_json
+from deep_agents.streaming import AgentStreamer, StreamOptions
+from deep_agents.utils.json_manager import manage_result_json
 
 
 class ChatCLI:
@@ -44,12 +46,15 @@ class ChatCLI:
         models: list | None = None,
         memory: Any | None = None,
         toolkit: Any | None = None,
+        stream_options: StreamOptions | None = None,
     ) -> None:
         """`agent_factory(model_config) -> (agent, gateway)` habilita o comando /modello.
         `memory` (um `MemoryBuilder`) habilita as sessões: grava cada turno e o comando /sessioni.
-        `toolkit` (um `ToolkitBuilder`) habilita o feedback das tools e a seção de fontes (lidas do canal lateral)."""
+        `toolkit` (um `ToolkitBuilder`) dá o canal lateral ao streamer (seção de fontes).
+        `stream_options` (`StreamOptions`) configura o streaming da resposta (granularidade etc.)."""
         self.channel = toolkit.channel if toolkit is not None else None
-        self.tool_names = toolkit.tool_names() if toolkit is not None else set()
+        self.stream_options = stream_options
+        self.verbosity = "off"   # /dettagli: off (só o essencial) | on (secundários) | debug
         self.agent = agent
         self.gateway = gateway
         self.agent_factory = agent_factory
@@ -69,6 +74,7 @@ class ChatCLI:
                     "/modello": lambda: [m.spec for m in self.models],
                     "/temperatura": lambda: ["default"] + [f"{v:.1f}" for _, v in TEMPERATURES if v is not None],
                     "/thinking": lambda: ["default", "off", "low", "medium", "high"],
+                    "/dettagli": lambda: list(VERBOSITY_LEVELS),
                     "/sessioni": lambda: [s.id for s in self.memory.sessions()] if self.memory else [],
                 },
             ),
@@ -102,34 +108,30 @@ class ChatCLI:
 
     def _send(self, text: str) -> None:
         self.messages.append({"role": "user", "content": text})
-        turn = self.channel.begin_turn() if self.channel is not None else None
-        dynamic: dict = {}   # estado do feedback ao vivo dos subagents dinâmicos neste turno
+        streamer = AgentStreamer(self.agent, self.gateway, options=self.stream_options, channel=self.channel)
+        # Cópia: o LangGraph converte, no lugar, os itens da lista recebida em objetos de mensagem.
+        handle = streamer.start(list(self.messages))
         try:
-            with self.view.status():
-                # Cópia: o LangGraph converte, no lugar, os itens da lista recebida em objetos de mensagem.
-                result, report = self.gateway.run_agent(
-                    self.agent, {"messages": list(self.messages)},
-                    on_event=lambda event: self.view.dynamic_event(event, dynamic),
-                )
+            with self.view.live_turn(self.verbosity) as live:
+                for event in handle:
+                    live.handle(event)
         except KeyboardInterrupt:
+            handle.cancel()
             self.messages.pop()
             self.view.notice("\nRisposta interrotta.")
             return
-        except Exception as e:
+
+        result = handle.result
+        if result.error is not None:
             self.messages.pop()  # mantém o histórico consistente
-            self.view.error(e, f"chiamata al modello {self.gateway.config.spec}")
+            self.view.error(result.error, f"chiamata al modello {self.gateway.config.spec}")
             return
 
-        manage_result_json(result)   # o resultado completo do turno (com as tools) fica no JSON
-        self.view.skills(skills_used(report))
-        self.view.subagents(subagents_used(report, self.tool_names))
-        self.view.tools(tools_used(report, self.tool_names | {"eval"}))   # `eval` = REPL dos subagents dinâmicos
-        answer = extract_response_text(result)
+        manage_result_json(result.state)   # o resultado completo do turno (com as tools) fica no JSON
+        answer = result.answer
         self._remember(answer)
-        self.view.agent_message(answer)
-        if self.channel is not None:
-            self.view.sources(self.channel.query(turn=turn, kind="sources"))
-        self.view.metrics(report)
+        if not live.metrics_printed and result.report is not None:
+            self.view.metrics(result.report, result.stats)
         self._save_turn(text, answer)
 
     def _remember(self, answer: str) -> None:
@@ -209,6 +211,9 @@ class ChatCLI:
             registry.register(
                 Command("/sessioni", "riprendi una sessione precedente (anche: /sessioni <id>)", self._cmd_sessions, ("/sessions",))
             )
+        registry.register(
+            Command("/dettagli", "dettagli dei passi dell'agente: off, on o debug (senza argomento mostra lo stato)", self._cmd_details)
+        )
         registry.register(Command("/metriche", "totali accumulati della sessione", self._cmd_metrics, ("/metrics",)))
         registry.register(
             Command("/esci", "termina la chat (anche: /exit, /quit)", self._cmd_exit, ("/exit", "/quit", "exit", "quit"))
@@ -228,6 +233,17 @@ class ChatCLI:
             self.memory.new_session()  # a sessão anterior continua salva e pode ser retomada com /sessioni
         self._redraw()
         self.view.notice("Nuova sessione iniziata." if self.memory is not None else "Cronologia cancellata.")
+
+    def _cmd_details(self, args: str = "") -> None:
+        """`/dettagli [off|on|debug]`: quanto mostrare dei passi dell'agente (on = anche i secondari, debug = tutto)."""
+        level = args.strip().lower()
+        if not level:
+            self.view.notice(f"Dettagli: {self.verbosity} (usa /dettagli off|on|debug)")
+        elif level in VERBOSITY_LEVELS:
+            self.verbosity = level
+            self.view.notice(f"Dettagli impostati: {level}")
+        else:
+            self.view.notice("Livello non valido (usa: off, on, debug).")
 
     def _cmd_metrics(self, args: str = "") -> None:
         self.view.totals_table(self.gateway.totals())

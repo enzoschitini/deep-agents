@@ -383,18 +383,43 @@
     sendBtn.disabled = v ? false : !input.value.trim();
   }
 
-  // ---------------------------------------------------------------- passaggi dell'agente (eventi reali)
+  // ---------------------------------------------------------------- passaggi dell'agente (eventi reali dello streaming)
+  // Ogni evento SSE è uno StreamEvent.to_dict(): kind/phase/id/parent_id/label/name/agent/visibility/data...
+  const DEBUG = new URLSearchParams(location.search).has("debug");
+  if (DEBUG) document.body.classList.add("show-debug");
+  const detailsBtn = $("detailsBtn");
+  function setDetails(on, save = true) {
+    document.body.classList.toggle("show-details", on);
+    detailsBtn.setAttribute("aria-pressed", String(on));
+    if (save) { try { localStorage.setItem("details", on ? "1" : "0"); } catch { /* senza storage resta per la sessione */ } }
+  }
+  let savedDetails = false;
+  try { savedDetails = localStorage.getItem("details") === "1"; } catch { /* storage non disponibile */ }
+  setDetails(savedDetails, false);
+  detailsBtn.onclick = () => setDetails(!document.body.classList.contains("show-details"));
+
+  // Tipi che non sono "attività" (hanno una resa propria o nessuna).
+  const NOT_ACTIVITY = new Set(["response", "reasoning", "run", "notice", "sources", "tool_args"]);
+  const KIND_ICON = { skill: "sparkle", todos: "list", async_task: "bot", file: "wrench", code_eval: "wrench", model_call: "bot", summarization: "list" };
+  const isAgent = (ev) => ev.kind === "subagent" || ev.kind === "subagent_dynamic";
+
   function stepNode(ev) {
+    const wrap = document.createElement("div");
+    wrap.className = "act";
+    wrap.dataset.id = ev.id;
+    wrap.dataset.vis = ev.visibility || "primary";
     const s = document.createElement("div");
     s.className = "step";
-    s.dataset.id = ev.id;
-    const lead = ev.kind === "subagent"
+    const lead = isAgent(ev)
       ? `<span class="avatar" data-agent="${KNOWN_AGENTS.has(ev.name) ? ev.name : "other"}" aria-hidden="true"></span>`
-      : `<span class="step-tool-icon" aria-hidden="true">${ic(/search/.test(ev.name) ? "globe" : "wrench")}</span>`;
-    s.innerHTML = `${lead}<b></b><span class="lbl"></span><span class="state"><span class="spin"></span></span>`;
-    s.querySelector("b").textContent = ev.name;
-    s.querySelector(".lbl").textContent = ev.label || (ev.kind === "subagent" ? "al lavoro" : "in uso");
-    return s;
+      : `<span class="step-tool-icon" aria-hidden="true">${ic(KIND_ICON[ev.kind] || (/search/.test(ev.name || "") ? "globe" : "wrench"))}</span>`;
+    s.innerHTML = `${lead}<b></b><span class="lbl"></span><span class="dur"></span><span class="state"><span class="spin"></span></span>`;
+    s.querySelector("b").textContent = ev.name || ev.kind;
+    s.querySelector(".lbl").textContent = ev.label || (isAgent(ev) ? "al lavoro" : "in uso");
+    const kids = document.createElement("div");
+    kids.className = "children";
+    wrap.append(s, kids);
+    return wrap;
   }
 
   function sourcesNode(sources) {
@@ -412,23 +437,14 @@
     return d;
   }
 
-  // Rivela la risposta (già completa) in modo rapido, così un testo lungo non compare di colpo.
-  function reveal(text, bubble) {
-    return new Promise((resolve) => {
-      let i = 0;
-      bubble.hidden = false;
-      bubble.classList.add("caret");
-      const step = Math.max(4, Math.ceil(text.length / 120));
-      (function tick() {
-        if (!busy) i = text.length;   // interrotto: mostra tutto
-        i = Math.min(text.length, i + step);
-        bubble.innerHTML = md(text.slice(0, i));
-        scrollDown();
-        if (i < text.length) return setTimeout(tick, 16);
-        bubble.classList.remove("caret");
-        resolve();
-      })();
-    });
+  // Blocco comprimibile (<details>) per "pensiero" (testo intermedio) e ragionamento del modello.
+  function foldNode(cls, title, vis) {
+    const d = document.createElement("details");
+    d.className = `fold ${cls}`;
+    d.dataset.vis = vis;
+    d.innerHTML = '<summary></summary><div class="fold-body md"></div>';
+    d.querySelector("summary").textContent = title;
+    return d;
   }
 
   async function send(text) {
@@ -439,27 +455,126 @@
     input.value = ""; autosize();
 
     const node = agentNode(null);
+    const shell = node.querySelector(".message-shell");
     const activity = node.querySelector(".agent-activity"), bubble = node.querySelector(".ui-bubble");
+    const DOTS = '<span class="thinking" role="status" aria-label="L\'agente sta pensando"><i></i><i></i><i></i></span>';
     bubble.hidden = false;
-    bubble.innerHTML = '<span class="thinking" role="status" aria-label="L\'agente sta pensando"><i></i><i></i><i></i></span>';
+    bubble.innerHTML = DOTS;
     thread.appendChild(node);
     scrollDown();
     setBusy(true);
     controller = new AbortController();
 
-    const finish = (id, error) => {
-      const el = activity.querySelector(`[data-id="${CSS.escape(id)}"]`);
-      if (!el) return;
-      el.querySelector(".state").innerHTML = error ? ic("x", "bad") : ic("check", "ok");
-      if (error) el.title = error;
+    const items = new Map();   // id evento -> nodo .act
+    let respText = "", respId = null, streaming = false, renderQueued = false;
+    let reasoning = null, reasoningText = "", reasoningId = null;
+    let sourcesShown = false, ended = false, failed = null;
+
+    const renderBubble = () => {
+      renderQueued = false;
+      bubble.hidden = false;
+      bubble.classList.toggle("caret", streaming);
+      bubble.innerHTML = md(respText);
+      scrollDown();
+    };
+    const queueRender = () => { if (!renderQueued) { renderQueued = true; requestAnimationFrame(renderBubble); } };
+    const resetBubble = (dots) => {
+      renderQueued = false; streaming = false; respText = ""; respId = null;
+      bubble.classList.remove("caret");
+      bubble.innerHTML = dots ? DOTS : "";
+      bubble.hidden = !dots;
     };
     const closeSpinners = (ok) => activity.querySelectorAll(".spin").forEach((sp) => (sp.parentElement.innerHTML = ic(ok ? "check" : "x", ok ? "ok" : "bad")));
+    const showSources = (list) => {
+      if (sourcesShown || !list?.length) return;
+      sourcesShown = true;
+      shell.appendChild(sourcesNode(list));
+    };
+    const finish = (el, ev, error) => {
+      const state = el.querySelector(":scope > .step .state");
+      if (state) state.innerHTML = error ? ic("x", "bad") : ic("check", "ok");
+      if (ev.duration_s != null) el.querySelector(":scope > .step .dur").textContent = `${Number(ev.duration_s).toFixed(1)}s`;
+      const tip = error || ev.summary;
+      if (tip) el.querySelector(":scope > .step").title = String(tip);
+    };
 
-    let answered = false, failed = null;
+    function onActivity(ev) {
+      let el = items.get(ev.id);
+      if (!el) {
+        if (ev.visibility === "debug" && !DEBUG) return;
+        el = stepNode(ev);
+        items.set(ev.id, el);
+        (items.get(ev.parent_id)?.querySelector(":scope > .children") || activity).appendChild(el);
+        if (!respText) bubble.hidden = true;   // niente puntini: l'attività è già visibile
+        scrollDown();
+      } else if (ev.phase === "start" && ev.label) {   // il replay di un evento (stesso id) aggiorna, non duplica
+        el.querySelector(":scope > .step .lbl").textContent = ev.label;
+      }
+      if (ev.phase === "error") finish(el, ev, ev.error || "errore");
+      else if (ev.phase === "end" || ev.phase === "info") finish(el, ev, null);
+    }
+
+    function onResponse(ev) {
+      if (ev.agent && ev.agent !== "main") return;   // i token dei subagent (debug) non vanno nella bolla
+      const d = ev.data || {};
+      if (ev.phase === "delta") {
+        if (respId !== null && ev.id !== respId) respText = "";
+        respId = ev.id; streaming = true;
+        respText += d.text || "";
+        queueRender();
+      } else if (ev.phase === "end") {
+        const full = d.text ?? respText;
+        if (d.final === false) {   // testo intermedio: diventa un "pensiero" comprimibile
+          if (full.trim()) {
+            const f = foldNode("thought", "Pensiero", "primary");
+            f.querySelector(".fold-body").innerHTML = md(full);
+            activity.appendChild(f);
+          }
+          resetBubble(false);
+        } else {
+          respText = full; streaming = false;
+          if (full) renderBubble();
+        }
+      }
+    }
+
+    function onReasoning(ev) {
+      if (ev.agent && ev.agent !== "main") return;
+      if (!reasoning || reasoningId !== ev.id) {
+        reasoning = foldNode("reasoning", "Ragionamento", "secondary");
+        reasoningText = ""; reasoningId = ev.id;
+        activity.appendChild(reasoning);
+      }
+      reasoningText += ev.data?.text || "";
+      reasoning.querySelector(".fold-body").textContent = reasoningText;
+    }
+
+    function handle(ev) {
+      switch (ev.kind) {
+        case "response": return onResponse(ev);
+        case "reasoning": return onReasoning(ev);
+        case "sources": return showSources(ev.data?.sources);
+        case "notice": return toast(ev.data?.message || ev.label || "");
+        case "run":
+          if (ev.phase === "error") { failed = ev.error || "errore"; return; }
+          if (ev.phase === "end") {
+            ended = true;
+            const d = ev.data || {};
+            closeSpinners(true);
+            if (d.answer != null) { respText = d.answer; streaming = false; renderBubble(); }
+            showSources(d.sources);
+            addActions(node, d.answer ?? respText, d.metrics);
+          }
+          return;
+        default:
+          if (!NOT_ACTIVITY.has(ev.kind)) onActivity(ev);
+      }
+    }
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }), signal: controller.signal,
+        body: JSON.stringify({ message: text, debug: DEBUG }), signal: controller.signal,
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `errore ${res.status}`);
 
@@ -474,34 +589,18 @@
           const line = buf.slice(0, cut).replace(/^data: /, "");
           buf = buf.slice(cut + 2);
           let ev; try { ev = JSON.parse(line); } catch { continue; }
-
-          if (ev.type === "step" && ev.phase === "start") {
-            bubble.hidden = true;   // niente puntini: l'attività è già visibile
-            activity.appendChild(stepNode(ev)); scrollDown();
-          } else if (ev.type === "step") {
-            finish(ev.id, ev.error);
-          } else if (ev.type === "answer") {
-            answered = true;
-            closeSpinners(true);
-            bubble.innerHTML = "";
-            await reveal(ev.text, bubble);
-            const shell = node.querySelector(".message-shell");
-            if (ev.sources?.length) shell.appendChild(sourcesNode(ev.sources));
-            addActions(node, ev.text, ev.metrics);
-          } else if (ev.type === "notice") {
-            toast(ev.message);
-          } else if (ev.type === "error") {
-            failed = ev.message;
-          }
+          try { handle(ev); } catch (e) { console.error("evento non gestito", ev, e); }
         }
       }
     } catch (e) {
       if (e.name === "AbortError") {
         bubble.classList.remove("caret");
-        if (!answered) {
+        if (!ended) {
           closeSpinners(false);
-          bubble.hidden = false;
-          bubble.innerHTML = "<p><i>Risposta interrotta. L'agente può finire in background e la risposta resta salvata nella sessione.</i></p>";
+          if (!respText) {
+            bubble.hidden = false;
+            bubble.innerHTML = "<p><i>Risposta interrotta. L'agente può finire in background e la risposta resta salvata nella sessione.</i></p>";
+          }
         }
       } else {
         failed = e.message;
@@ -510,10 +609,14 @@
 
     if (failed) {
       closeSpinners(false);
+      streaming = false; renderQueued = false;
       bubble.classList.remove("caret");
       bubble.hidden = false;
-      bubble.innerHTML = `<div class="error"><b>Errore.</b> ${esc(failed)}</div>`;
+      bubble.innerHTML = (respText ? md(respText) : "") + `<div class="error"><b>Errore.</b> ${esc(failed)}</div>`;
+    } else if (!ended && !controller?.signal.aborted) {
+      closeSpinners(false);   // il flusso si è chiuso senza `run/end`
     }
+    bubble.classList.remove("caret");
     controller = null;
     setBusy(false);
     scrollDown();

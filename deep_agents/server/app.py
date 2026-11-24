@@ -1,7 +1,10 @@
 """Servidor HTTP (só biblioteca padrão): serve `frontend/` e a API do agente.
 
   GET  /api/state          modelo, sessão atual, mensagens e lista de sessões
-  POST /api/chat           {"message": "..."} -> fluxo SSE com os eventos de `ChatService`
+  POST /api/chat           {"message": "...", "debug"?: bool} -> fluxo SSE (`data: <json>\n\n`), um `StreamEvent.to_dict()` por
+                           evento (kind/phase/id/parent_id/label/data...; ver `chat_service.py`): resposta em `response/delta`,
+                           atividades (tool/subagent/skill...) em start/end/error, fim em `run/end` (answer, sources, metrics)
+                           ou `run/error`; avisos em `notice`. Não há mais os eventos `step` e `answer`.
   POST /api/model          {"model": "provider:modello"} cambia il modello (come /modello nella CLI)
   POST /api/session/rename {"id", "title"} dà un nome alla sessione (titolo vuoto = automatico)
   POST /api/session/delete {"id": "..."} e /api/session/delete_all eliminano le sessioni (anche per la CLI)
@@ -68,7 +71,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json({"error": "origine non consentita"}, HTTPStatus.FORBIDDEN)
         route, body = self.path.split("?")[0], self._body()
         if route == "/api/chat":
-            return self._chat(str(body.get("message", "")).strip())
+            return self._chat(str(body.get("message", "")).strip(), debug=bool(body.get("debug")))
         if route == "/api/model":
             error = self.service.set_model(str(body.get("model", "")))
             return self._json(self.service.state() if error is None else {"error": error}, 200 if error is None else HTTPStatus.CONFLICT)
@@ -89,16 +92,17 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(self.service.state() if ok else {"error": "sessione non trovata o risposta in corso"}, 200 if ok else HTTPStatus.CONFLICT)
         self._json({"error": "non trovato"}, HTTPStatus.NOT_FOUND)
 
-    def _chat(self, message: str) -> None:
+    def _chat(self, message: str, debug: bool = False) -> None:
         if not message:
             return self._json({"error": "messaggio vuoto"}, HTTPStatus.BAD_REQUEST)
-        events = self.service.send(message)
+        events = self.service.send(message, debug=debug)
         if events is None:
             return self._json({"error": "c'è già una risposta in corso"}, HTTPStatus.CONFLICT)
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Connection", "close")
+        self.send_header("X-Accel-Buffering", "no")   # proxies (nginx) não podem acumular o SSE
         self.end_headers()
         try:
             for event in events:   # se o navegador fechar, o turno termina e é gravado do mesmo jeito

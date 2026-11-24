@@ -79,6 +79,8 @@
               <h1 class="conversation-agent-heading"><span class="conversation-agent-name">Agente principale</span><span class="conversation-agent-title">con subagent</span></h1>
             </div>
           </div>
+          <div class="header-right">
+          <button type="button" class="details-toggle" id="detailsBtn" aria-pressed="false" title="Mostra anche i passaggi secondari (file, chiamate al modello, ragionamento)">Dettagli</button>
           <div class="model-picker">
             <button type="button" class="provider-model-trigger" id="modelBtn" aria-haspopup="menu" aria-expanded="false" title="Cambia modello">
               <span class="provider-mark" aria-hidden="true"></span>
@@ -86,6 +88,7 @@
               <svg class="icon icon-sm"><use href="#i-chevron"/></svg>
             </button>
             <div class="menu menu-right" id="modelMenu" role="menu" hidden></div>
+          </div>
           </div>
           <span class="tab-shape" aria-hidden="true"></span>
         </header>

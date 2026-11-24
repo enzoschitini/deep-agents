@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from contextlib import contextmanager
 from typing import Any, Callable, Iterator
 
 from langchain.chat_models import init_chat_model
@@ -73,31 +74,25 @@ class LLMGateway:
             report.wall_time_s = time.perf_counter() - t0
             self.history.append(report)
 
-    # -- execução de um agente (criado fora do model/) com métricas --
-    def run_agent(self, agent: Any, payload: dict, *, label: str | None = None,
-                  config: dict | None = None, on_event: Callable[[dict], None] | None = None,
-                  **kwargs) -> tuple[Any, RunReport]:
-        """Roda o agente e devolve (resultado final, relatório). Com `on_event`, roda em stream e entrega a ele, ao vivo,
-        cada evento do stream `custom` (ex.: ciclo de vida dos subagents dinâmicos); o resultado é o mesmo do `invoke`."""
+    @contextmanager
+    def tracked_run(self, label: str | None = None) -> Iterator[tuple[RunReport, list[BaseCallbackHandler]]]:
+        """Contexto de UMA execução com métricas: entrega (relatório, handlers) para o chamador pôr em `config["callbacks"]`.
+        Ao sair (mesmo com erro) mede `wall_time_s` e grava o relatório em `history`. Usado pelo `AgentStreamer`."""
         report, cfg = self._new_run(label)
-        merged = {**(config or {}), "callbacks": [*(config or {}).get("callbacks", []), *cfg["callbacks"]]}
         t0 = time.perf_counter()
         try:
-            if on_event is None:
-                result = agent.invoke(payload, config=merged, **kwargs)
-            else:
-                result = None
-                for mode, chunk in agent.stream(payload, config=merged, stream_mode=["values", "custom"], **kwargs):
-                    if mode == "values":
-                        result = chunk   # o último estado é o resultado final
-                    else:
-                        try:
-                            on_event(chunk)
-                        except Exception:   # feedback visual não pode derrubar a resposta
-                            pass
+            yield report, list(cfg["callbacks"])
         finally:
             report.wall_time_s = time.perf_counter() - t0
             self.history.append(report)
+
+    # -- execução de um agente (criado fora do model/) com métricas --
+    def run_agent(self, agent: Any, payload: dict, *, label: str | None = None,
+                  config: dict | None = None, **kwargs) -> tuple[Any, RunReport]:
+        """Roda o agente (`invoke`) e devolve (resultado final, relatório). O streaming ao vivo é do `AgentStreamer`."""
+        with self.tracked_run(label) as (report, handlers):
+            merged = {**(config or {}), "callbacks": [*(config or {}).get("callbacks", []), *handlers]}
+            result = agent.invoke(payload, config=merged, **kwargs)
         return result, report
 
     # -- agregado de toda a sessão --

@@ -10,6 +10,8 @@ from typing import Any, Callable
 from deep_agents.agent import AgentBuilder
 from deep_agents.memory.build_memory import MemoryBuilder
 from deep_agents.model.model_config import ModelConfig
+from deep_agents.prompts.system import SUMMARY_PROMPT
+from deep_agents.streaming.options import StreamOptions
 from deep_agents.subagents.build_subagents import SubagentBuilder
 from deep_agents.toolkit.build_toolkit import ToolkitBuilder
 from deep_agents.toolkit.side_channel import SideChannel
@@ -42,6 +44,11 @@ SUBAGENTS = {
 # em loops/Promise.all (lotes, votação, torneio). Só é usado quando o pedido contém "workflow" (ver rules/09_workflow.md).
 # "max_concurrency": None = padrão de `config.DYNAMIC_MAX_CONCURRENCY`.
 DYNAMIC_SUBAGENTS = {"enabled": True, "max_concurrency": None}
+
+# Streaming da resposta (CLI e servidor): palavra a palavra. `summary_marker` é o início real do prompt do
+# `SummarizationMiddleware` (memory/build_memory.py usa `SUMMARY_PROMPT`): identifica as chamadas de resumo para
+# que os tokens delas não vazem como resposta.
+STREAMING = StreamOptions(granularity="word", summary_marker=SUMMARY_PROMPT[:40])
 
 
 @dataclass
