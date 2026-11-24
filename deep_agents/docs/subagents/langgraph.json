@@ -1,0 +1,9 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "supervisor": "./async_subagents.py:supervisor",
+    "researcher": "./async_subagents.py:researcher",
+    "writer": "./async_subagents.py:writer"
+  },
+  "env": "../../../.env"
+}
