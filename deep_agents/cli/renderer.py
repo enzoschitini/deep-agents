@@ -353,7 +353,7 @@ class Renderer:
     @staticmethod
     def session_label(info: Any, is_current: bool) -> str:
         """Uma linha do seletor de sessões: id · nº de mensagens · data · começo da primeira mensagem."""
-        preview = " ".join(info.preview.split())
+        preview = " ".join((getattr(info, "title", "") or info.preview).split())
         if len(preview) > 50:
             preview = preview[:49] + "…"
         mark = "  ● attuale" if is_current else ""

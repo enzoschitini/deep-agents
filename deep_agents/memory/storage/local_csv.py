@@ -43,6 +43,30 @@ class LocalCSV(MemoryRepository):
             writer.writerow(vars(record))
         return record
 
+    def _rewrite(self, keep: list[MemoryRecord]) -> None:
+        """Regrava o arquivo só com `keep` (escreve num temporário e troca, para não perder dados se falhar)."""
+        if not keep:
+            self.file_path.unlink(missing_ok=True)
+            return
+        tmp = self.file_path.with_suffix(".csv.tmp")
+        with tmp.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=_FIELDS)
+            writer.writeheader()
+            writer.writerows(vars(r) for r in keep)
+        tmp.replace(self.file_path)
+
+    def delete_session(self, session_id: str) -> int:
+        records = self._read()
+        keep = [r for r in records if r.session_id != session_id]
+        if len(keep) != len(records):
+            self._rewrite(keep)
+        return len(records) - len(keep)
+
+    def delete_all(self) -> int:
+        count = len(self._read())
+        self._rewrite([])
+        return count
+
     def get(self, record_id: str) -> MemoryRecord | None:
         return next((r for r in self._read() if r.id == record_id), None)
 

@@ -2,6 +2,9 @@
 
   GET  /api/state          modelo, sessão atual, mensagens e lista de sessões
   POST /api/chat           {"message": "..."} -> fluxo SSE com os eventos de `ChatService`
+  POST /api/model          {"model": "provider:modello"} cambia il modello (come /modello nella CLI)
+  POST /api/session/rename {"id", "title"} dà un nome alla sessione (titolo vuoto = automatico)
+  POST /api/session/delete {"id": "..."} e /api/session/delete_all eliminano le sessioni (anche per la CLI)
   POST /api/session/new    começa uma sessão vazia
   POST /api/session/resume {"id": "..."} retoma uma sessão salva
 
@@ -66,6 +69,18 @@ class Handler(SimpleHTTPRequestHandler):
         route, body = self.path.split("?")[0], self._body()
         if route == "/api/chat":
             return self._chat(str(body.get("message", "")).strip())
+        if route == "/api/model":
+            error = self.service.set_model(str(body.get("model", "")))
+            return self._json(self.service.state() if error is None else {"error": error}, 200 if error is None else HTTPStatus.CONFLICT)
+        if route == "/api/session/rename":
+            ok = self.service.rename_session(str(body.get("id", "")), str(body.get("title", "")))
+            return self._json(self.service.state() if ok else {"error": "sessione non trovata"}, 200 if ok else HTTPStatus.NOT_FOUND)
+        if route == "/api/session/delete":
+            ok = self.service.delete_session(str(body.get("id", "")))
+            return self._json(self.service.state() if ok else {"error": "sessione non trovata o risposta in corso"}, 200 if ok else HTTPStatus.CONFLICT)
+        if route == "/api/session/delete_all":
+            ok = self.service.delete_all_sessions()
+            return self._json(self.service.state() if ok else {"error": "risposta in corso"}, 200 if ok else HTTPStatus.CONFLICT)
         if route == "/api/session/new":
             ok = self.service.new_session()
             return self._json(self.service.state() if ok else {"error": "risposta in corso"}, 200 if ok else HTTPStatus.CONFLICT)

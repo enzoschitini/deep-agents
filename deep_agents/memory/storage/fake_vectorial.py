@@ -50,6 +50,16 @@ class FakeVectorialDatabase(MemoryRepository):
     def list(self, session_id: str | None = None) -> list[MemoryRecord]:
         return [r for r, _ in self._rows if session_id is None or r.session_id == session_id]
 
+    def delete_session(self, session_id: str) -> int:
+        before = len(self._rows)
+        self._rows = [(r, emb) for r, emb in self._rows if r.session_id != session_id]
+        return before - len(self._rows)
+
+    def delete_all(self) -> int:
+        count = len(self._rows)
+        self._rows = []
+        return count
+
     def search(self, query: str, limit: int = 5) -> list[MemoryRecord]:
         q = _fake_embedding(query)
         scored = [(_cosine(q, emb), r) for r, emb in self._rows]

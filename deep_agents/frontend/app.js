@@ -1,29 +1,26 @@
-// Chat UI collegata al backend vero (python -m deep_agents.server). Le sessioni sono le stesse della CLI.
+// Chat collegata al backend vero (python -m deep_agents.server). Le sessioni sono le stesse della CLI.
 (() => {
   const $ = (id) => document.getElementById(id);
-  const app = $("app"), thread = $("thread"), scroller = $("scroll");
-  const form = $("form"), input = $("input"), sendBtn = $("send"), historyEl = $("history");
+  const app = $("app"), frame = $("frame"), thread = $("thread"), scroller = $("scroll");
+  const form = $("form"), input = $("input"), sendBtn = $("send"), historyEl = $("history"), search = $("search");
 
   const SUGGESTIONS = [
-    ["Cerca novità su LangChain", "Il pesquisador cerca sul web e riassume."],
-    ["Scrivi un post per LinkedIn", "Il redator prepara una bozza pronta da pubblicare."],
-    ["Spiega i subagent dinamici", "Come l'agente principale delega il lavoro."],
-    ["Confronta due framework di agenti", "Ricerca e sintesi in una tabella."],
+    "Cerca novità su LangChain",
+    "Scrivi un post per LinkedIn",
+    "Spiega i subagent dinamici",
+    "Confronta due framework di agenti",
   ];
+  const KNOWN_AGENTS = new Set(["pesquisador", "redator"]);
 
   let state = { model: "", session: "", messages: [], sessions: [] };
   let busy = false;
   let controller = null;   // AbortController della risposta in corso
 
-  const icons = {
-    copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
-    check: '<svg viewBox="0 0 24 24" class="check"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-    x: '<svg viewBox="0 0 24 24" class="check err"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-  };
-
+  const ic = (name, cls = "") => `<svg class="icon ${cls}"><use href="#i-${name}"/></svg>`;
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const hhmm = (d) => d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
 
-  // Markdown minimale: blocchi di codice, titoli, elenchi, citazioni, grassetto, codice inline, link.
+  // Markdown minimale: blocchi di codice, tabelle, titoli, elenchi, citazioni, grassetto, codice inline, link.
   function md(src) {
     const inline = (t) => esc(t)
       .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
@@ -61,39 +58,6 @@
     return data;
   }
 
-  // ---------------------------------------------------------------- sidebar e stato
-  function renderHistory() {
-    historyEl.innerHTML = state.sessions.length ? '<div class="group">Sessioni</div>' : "";
-    state.sessions.forEach((s) => {
-      const b = document.createElement("button");
-      b.textContent = s.preview || s.id;
-      b.title = `${s.id} · ${s.count} messaggi`;
-      if (s.id === state.session) b.setAttribute("aria-current", "true");
-      b.onclick = async () => {
-        if (busy) return;
-        try { apply(await api("/api/session/resume", { id: s.id })); } catch (e) { toast(e.message); }
-        app.classList.remove("side-open");
-      };
-      historyEl.appendChild(b);
-    });
-    $("model").textContent = state.model || "…";
-  }
-
-  function apply(newState) {
-    state = newState;
-    renderHistory();
-    thread.innerHTML = "";
-    if (!state.messages.length) return renderWelcome();
-    state.messages.forEach((m) => thread.appendChild(m.role === "user" ? userNode(m.content) : botNode(m.content)));
-    scrollDown();
-  }
-
-  async function newChat() {
-    if (busy) return;
-    try { apply(await api("/api/session/new", {})); } catch (e) { toast(e.message); }
-    input.focus();
-  }
-
   let toastTimer;
   function toast(msg) {
     const t = $("toast");
@@ -102,44 +66,314 @@
     toastTimer = setTimeout(() => (t.hidden = true), 4000);
   }
 
+  // ---------------------------------------------------------------- barra laterale
+  function dayLabel(date) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const d = new Date(date); d.setHours(0, 0, 0, 0);
+    const diff = Math.round((today - d) / 86400000);
+    if (diff <= 0) return "Oggi";
+    if (diff === 1) return "Ieri";
+    return d.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
+  }
+
+  // Colori degli avatar delle sessioni: la palette degli agenti dell'interfaccia di riferimento.
+  const TINTS = ["#4aa3ff", "#3ddc97", "#b58cff", "#ff6fb1", "#f5c84b", "#5fd6e6", "#d6adf2", "#ff8a5c"];
+  function tintFor(id) {
+    let h = 5381;
+    for (const ch of String(id)) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;
+    return TINTS[h % TINTS.length];
+  }
+
+  function rowNode({ title, time, preview, current, onClick, blink, tint, session }) {
+    const wrap = document.createElement("div");
+    wrap.className = "agent-row-wrap";
+    const b = document.createElement("div");   // non un <button>: dentro c'è il campo della rinomina
+    b.setAttribute("role", "button"); b.tabIndex = 0;
+    b.className = "agent-row";
+    b.addEventListener("keydown", (e) => { if (e.target === b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); b.click(); } });
+    if (current) b.setAttribute("aria-current", "true");
+    b.innerHTML = `<span class="avatar${blink ? " blink" : ""}" data-agent="main" aria-hidden="true"></span><span><span class="agent-row-heading"><strong class="agent-row-title"></strong><span class="agent-row-time"></span></span><span class="agent-row-preview"></span></span>`;
+    if (tint) { const av = b.querySelector(".avatar"); av.dataset.tint = ""; av.style.setProperty("--tint", tint); }
+    b.querySelector(".agent-row-title").textContent = title;
+    b.querySelector(".agent-row-time").textContent = time;
+    b.querySelector(".agent-row-preview").textContent = preview;
+    b.title = title;
+    b.onclick = onClick;
+    wrap.appendChild(b);
+    if (session) {   // sessioni salvate: menu "⋯" e tasto destro
+      const more = document.createElement("button");
+      more.type = "button"; more.className = "row-more"; more.setAttribute("aria-label", "Altre azioni"); more.setAttribute("aria-haspopup", "menu");
+      more.innerHTML = ic("dots");
+      more.onclick = (e) => { e.stopPropagation(); const r = more.getBoundingClientRect(); openRowMenu(session, wrap, r.left, r.bottom + 4, more); };
+      wrap.appendChild(more);
+      wrap.addEventListener("contextmenu", (e) => { e.preventDefault(); openRowMenu(session, wrap, e.clientX, e.clientY, more); });
+    }
+    return wrap;
+  }
+
+  // ---------------------------------------------------------------- menu delle sessioni, rinomina, eliminazione
+  const rowMenu = $("rowMenu");
+  let menuOwner = null;
+  function closeRowMenu() { rowMenu.hidden = true; menuOwner?.setAttribute("aria-expanded", "false"); menuOwner = null; }
+  function openRowMenu(session, wrap, x, y, owner) {
+    closeRowMenu();
+    rowMenu.innerHTML = "";
+    const item = (label, icon, cls, fn) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.setAttribute("role", "menuitem"); if (cls) b.className = cls;
+      b.innerHTML = `${ic(icon)}<span>${label}</span>`;
+      b.onclick = () => { closeRowMenu(); fn(); };
+      rowMenu.appendChild(b);
+    };
+    item("Rinomina", "pencil", "", () => startRename(session, wrap));
+    item("Elimina", "trash", "danger", () => deleteSession(session));
+    rowMenu.hidden = false;
+    const w = rowMenu.offsetWidth, h = rowMenu.offsetHeight;
+    rowMenu.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + "px";
+    rowMenu.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + "px";
+    menuOwner = owner; owner.setAttribute("aria-expanded", "true");
+    rowMenu.querySelector("button").focus();
+  }
+  document.addEventListener("click", (e) => { if (!rowMenu.contains(e.target)) closeRowMenu(); });
+  historyEl.addEventListener("scroll", closeRowMenu);
+  rowMenu.addEventListener("click", (e) => e.stopPropagation());
+
+  function startRename(session, wrap) {
+    const h = wrap.querySelector(".agent-row-title");
+    const input = document.createElement("input");
+    input.className = "agent-row-title-input"; input.value = session.title || session.preview || ""; input.maxLength = 80;
+    input.setAttribute("aria-label", "Nuovo nome della conversazione");
+    h.replaceWith(input);
+    input.focus(); input.select();
+    let done = false;
+    const finish = async (save) => {
+      if (done) return; done = true;
+      const value = input.value.trim();
+      if (save && value !== (session.title || session.preview)) {
+        try { state = await api("/api/session/rename", { id: session.id, title: value }); } catch (e) { toast(e.message); }
+      }
+      renderHistory();
+    };
+    input.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); finish(true); } else if (e.key === "Escape") { e.preventDefault(); finish(false); } };
+    input.onblur = () => finish(true);
+    input.onclick = (e) => e.stopPropagation();
+  }
+
+  const dialog = $("dialog");
+  function confirmDialog(title, text, okLabel) {
+    $("dialogTitle").textContent = title; $("dialogText").textContent = text; $("dialogOk").textContent = okLabel;
+    return new Promise((resolve) => {
+      const done = (value) => {
+        $("dialogOk").onclick = $("dialogCancel").onclick = dialog.oncancel = null;
+        if (dialog.open) dialog.close();
+        resolve(value);
+      };
+      $("dialogOk").onclick = () => done(true);
+      $("dialogCancel").onclick = () => done(false);
+      dialog.oncancel = (e) => { e.preventDefault(); done(false); };   // tasto Esc
+      dialog.showModal();
+      $("dialogCancel").focus();
+    });
+  }
+
+  async function deleteSession(session) {
+    if (busy) return toast("C'è una risposta in corso: attendi che finisca.");
+    const name = session.title || session.preview || session.id;
+    if (!(await confirmDialog("Eliminare questa conversazione?", `«${name.length > 60 ? name.slice(0, 59) + "…" : name}» sarà eliminata anche dalla CLI. Non si può annullare.`, "Elimina"))) return;
+    try { apply(await api("/api/session/delete", { id: session.id })); } catch (e) { toast(e.message); }
+  }
+
+  $("clearAll").onclick = async () => {
+    if (busy) return toast("C'è una risposta in corso: attendi che finisca.");
+    const n = state.sessions.length;
+    if (!n) return;
+    if (!(await confirmDialog("Eliminare tutte le conversazioni?", `${n === 1 ? "Verrà eliminata 1 conversazione" : `Verranno eliminate ${n} conversazioni`}, anche per la CLI. Non si può annullare.`, "Elimina tutte"))) return;
+    try { apply(await api("/api/session/delete_all", {})); toast("Conversazioni eliminate."); } catch (e) { toast(e.message); }
+  };
+
+  function renderHistory() {
+    const q = search.value.trim().toLowerCase();
+    historyEl.innerHTML = "";
+    $("model").textContent = state.model || "…";
+    renderModelMenu();
+
+    const inList = state.sessions.some((s) => s.id === state.session);
+    if (!inList && !q) {   // sessione corrente ancora vuota: la mostro, come una chat appena creata
+      const sec = document.createElement("section");
+      sec.innerHTML = '<span class="sidebar-section-name">Adesso</span>';
+      sec.appendChild(rowNode({ title: "Nuova chat", time: hhmm(new Date()), preview: "Nessun messaggio", current: true, blink: true, onClick: () => {} }));
+      historyEl.appendChild(sec);
+    }
+
+    $("clearAll").disabled = !state.sessions.length;
+    const shown = state.sessions.filter((s) => !q || (s.title || s.preview || s.id).toLowerCase().includes(q));
+    if (!shown.length && q) {
+      historyEl.innerHTML = '<p class="agent-list-empty">Nessuna sessione corrisponde alla ricerca.</p>';
+      return;
+    }
+    let lastLabel = null, sec = null;
+    shown.forEach((s) => {
+      const when = new Date(s.updated_at);
+      const label = isNaN(when) ? "Sessioni" : dayLabel(when);
+      if (label !== lastLabel) {
+        sec = document.createElement("section");
+        sec.innerHTML = `<span class="sidebar-section-name">${esc(label)}</span>`;
+        historyEl.appendChild(sec);
+        lastLabel = label;
+      }
+      sec.appendChild(rowNode({
+        title: s.title || s.preview || s.id,
+        session: s,
+        time: isNaN(when) ? "" : hhmm(when),
+        preview: `${s.count} messaggi`,
+        current: s.id === state.session,
+        tint: tintFor(s.id),
+        onClick: async () => {
+          closeDrawer();
+          if (busy || s.id === state.session) return;
+          try { apply(await api("/api/session/resume", { id: s.id })); } catch (e) { toast(e.message); }
+        },
+      }));
+    });
+  }
+
+  function apply(newState) {
+    state = newState;
+    renderHistory();
+    thread.innerHTML = "";
+    if (!state.messages.length) return renderWelcome();
+    const cur = state.sessions.find((s) => s.id === state.session);
+    const when = cur && !isNaN(new Date(cur.updated_at)) ? new Date(cur.updated_at) : new Date();
+    thread.appendChild(timeMarker(when));
+    state.messages.forEach((m) => thread.appendChild(m.role === "user" ? userNode(m.content) : agentNode(m.content)));
+    scroller.scrollTop = scroller.scrollHeight;
+  }
+
+  async function newChat() {
+    closeDrawer();
+    if (busy) return;
+    try { apply(await api("/api/session/new", {})); } catch (e) { toast(e.message); }
+    input.focus();
+  }
+
+  const closeDrawer = () => app.classList.remove("side-open");
+  const toggleSide = () => frame.classList.toggle("collapsed");
+  $("collapseSide").onclick = toggleSide;
+  $("expandSide").onclick = toggleSide;
+  $("railSessions").onclick = () => { toggleSide(); $("railSessions").setAttribute("aria-pressed", String(!frame.classList.contains("collapsed"))); };
+  $("openSide").onclick = () => app.classList.add("side-open");
+  $("scrim").onclick = closeDrawer;
+  $("newChat").onclick = newChat;
+  $("railBrand").onclick = newChat;
+  search.addEventListener("input", renderHistory);
+
+  // ---------------------------------------------------------------- modello
+  const modelBtn = $("modelBtn"), modelMenu = $("modelMenu");
+  function setModelMenu(open) { modelMenu.hidden = !open; modelBtn.setAttribute("aria-expanded", String(open)); }
+  function renderModelMenu() {
+    modelMenu.innerHTML = '<div class="menu-title">Modello</div>';
+    (state.models || [state.model]).forEach((spec) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "menu-item"; b.setAttribute("role", "menuitemradio");
+      b.setAttribute("aria-checked", String(spec === state.model));
+      b.innerHTML = `<span></span>${spec === state.model ? ic("check") : ""}`;
+      b.firstChild.textContent = spec;
+      b.onclick = () => changeModel(spec);
+      modelMenu.appendChild(b);
+    });
+  }
+  async function changeModel(spec) {
+    setModelMenu(false);
+    if (busy) return toast("C'è una risposta in corso: attendi che finisca.");
+    if (spec === state.model) return;
+    modelBtn.setAttribute("aria-busy", "true");
+    try {
+      state = await api("/api/model", { model: spec });
+      renderHistory(); renderModelMenu();
+      toast(`Modello impostato: ${state.model}`);
+    } catch (e) { toast(e.message); }
+    modelBtn.removeAttribute("aria-busy");
+  }
+  modelBtn.onclick = (e) => { e.stopPropagation(); setMenu(false); setModelMenu(modelMenu.hidden); };
+  modelMenu.addEventListener("click", (e) => e.stopPropagation());
+
+  // ---------------------------------------------------------------- menu "+"
+  const plusBtn = $("plusBtn"), plusMenu = $("plusMenu");
+  function buildMenu() {
+    plusMenu.innerHTML = '<div class="menu-title">Suggerimenti</div>';
+    SUGGESTIONS.forEach((t) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.setAttribute("role", "menuitem"); b.textContent = t;
+      b.onclick = () => { setMenu(false); input.value = t; autosize(); input.focus(); };
+      plusMenu.appendChild(b);
+    });
+    plusMenu.insertAdjacentHTML("beforeend", "<hr>");
+    const n = document.createElement("button");
+    n.type = "button"; n.setAttribute("role", "menuitem"); n.textContent = "Nuova chat";
+    n.onclick = () => { setMenu(false); newChat(); };
+    plusMenu.appendChild(n);
+  }
+  function setMenu(open) { plusMenu.hidden = !open; plusBtn.setAttribute("aria-expanded", String(open)); }
+  plusBtn.onclick = (e) => { e.stopPropagation(); setModelMenu(false); setMenu(plusMenu.hidden); };
+  document.addEventListener("click", (e) => { if (!plusMenu.contains(e.target)) setMenu(false); setModelMenu(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { setMenu(false); setModelMenu(false); closeRowMenu(); closeDrawer(); } });
+  buildMenu();
+
   // ---------------------------------------------------------------- messaggi
   function renderWelcome() {
     thread.innerHTML = `
       <div class="welcome">
-        <h1>Da dove vuoi iniziare?</h1>
-        <p>Scrivi una richiesta: l'agente principale decide se rispondere da solo o delegare a un subagent.</p>
-        <div class="chips">${SUGGESTIONS.map(([t, d], i) => `<button class="chip" data-i="${i}"><b>${t}</b>${d}</button>`).join("")}</div>
+        <span class="avatar blink" data-agent="main" aria-hidden="true"></span>
+        <h2>Come posso aiutarti?</h2>
+        <p>L'agente principale decide se rispondere da solo o delegare a un subagent. Vedrai i passaggi mentre accadono.</p>
+        <div class="chips"></div>
       </div>`;
-    thread.querySelectorAll(".chip").forEach((el) => { el.onclick = () => send(SUGGESTIONS[el.dataset.i][0]); });
+    const chips = thread.querySelector(".chips");
+    SUGGESTIONS.forEach((t) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = t;
+      b.onclick = () => send(t);
+      chips.appendChild(b);
+    });
+  }
+
+  function timeMarker(date) {
+    const d = document.createElement("div");
+    d.className = "time-marker";
+    d.innerHTML = `<span>${esc(dayLabel(date))} ${hhmm(date)}</span>`;
+    return d;
   }
 
   function userNode(text) {
     const d = document.createElement("div");
-    d.className = "msg user";
-    d.innerHTML = '<div class="bubble"></div>';
-    d.firstChild.textContent = text;
+    d.className = "message-entry user";
+    d.innerHTML = '<div class="message-shell"><div class="ui-bubble"></div></div>';
+    d.querySelector(".ui-bubble").textContent = text;
     return d;
   }
 
-  function botNode(text) {
+  // Risposta dell'agente: attività in diretta, bolla col testo, fonti e azioni.
+  function agentNode(text) {
     const d = document.createElement("div");
-    d.className = "msg bot";
-    d.innerHTML = '<div class="bot-avatar"></div><div class="bot-body"><div class="steps"></div><div class="prose"></div></div>';
-    if (text != null) { d.querySelector(".prose").innerHTML = md(text); addActions(d, text); }
+    d.className = "message-entry agent";
+    d.innerHTML = '<div class="message-shell"><div class="agent-activity"></div><div class="ui-bubble md"></div></div>';
+    const bubble = d.querySelector(".ui-bubble");
+    if (text != null) { bubble.innerHTML = md(text); addActions(d, text); } else bubble.hidden = true;
     return d;
   }
 
-  function addActions(node, text) {
-    const a = document.createElement("div");
-    a.className = "actions";
-    a.innerHTML = `<button>${icons.copy}Copia</button>`;
-    a.firstChild.onclick = (e) => {
+  function addActions(node, text, metrics) {
+    const row = document.createElement("div");
+    row.className = "message-action-row";
+    row.innerHTML = `<button type="button" class="message-action-button">${ic("copy")}Copia</button>`;
+    const btn = row.firstChild;
+    btn.onclick = () => {
       navigator.clipboard?.writeText(text);
-      const btn = e.currentTarget;
-      btn.innerHTML = `${icons.check}Copiato`;
-      setTimeout(() => (btn.innerHTML = `${icons.copy}Copia`), 1500);
+      btn.innerHTML = `${ic("check")}Copiato`;
+      setTimeout(() => (btn.innerHTML = `${ic("copy")}Copia`), 1500);
     };
-    node.querySelector(".bot-body").appendChild(a);
+    if (metrics) { const m = document.createElement("span"); m.className = "metrics"; m.textContent = metrics; m.title = metrics; row.appendChild(m); }
+    node.querySelector(".message-shell").appendChild(row);
   }
 
   function setBusy(v) {
@@ -154,43 +388,44 @@
     const s = document.createElement("div");
     s.className = "step";
     s.dataset.id = ev.id;
-    s.innerHTML = '<span class="tag"></span><span class="lbl"></span><span class="state"><span class="spin"></span></span>';
-    s.querySelector(".tag").textContent = ev.name;
-    s.querySelector(".tag").classList.toggle("amber", ev.kind === "subagent");
-    s.querySelector(".lbl").textContent = ev.label || (ev.kind === "subagent" ? "delegato" : "strumento in uso");
+    const lead = ev.kind === "subagent"
+      ? `<span class="avatar" data-agent="${KNOWN_AGENTS.has(ev.name) ? ev.name : "other"}" aria-hidden="true"></span>`
+      : `<span class="step-tool-icon" aria-hidden="true">${ic(/search/.test(ev.name) ? "globe" : "wrench")}</span>`;
+    s.innerHTML = `${lead}<b></b><span class="lbl"></span><span class="state"><span class="spin"></span></span>`;
+    s.querySelector("b").textContent = ev.name;
+    s.querySelector(".lbl").textContent = ev.label || (ev.kind === "subagent" ? "al lavoro" : "in uso");
     return s;
   }
 
   function sourcesNode(sources) {
     const d = document.createElement("div");
     d.className = "sources";
-    d.innerHTML = '<div class="sources-title">Fonti</div>';
     sources.forEach((s) => {
       const a = document.createElement("a");
-      a.href = s.url; a.target = "_blank"; a.rel = "noopener noreferrer";
-      a.textContent = s.title || s.domain || s.url;
-      a.title = s.url;
-      const dom = document.createElement("span");
-      dom.textContent = s.domain || "";
-      a.appendChild(dom);
+      a.className = "source-pill";
+      a.href = s.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.title = s.title || s.url;
+      a.innerHTML = "<span></span><b></b>";
+      a.firstChild.textContent = (s.domain || "").replace(/^www\./, "");
+      a.lastChild.textContent = s.title || s.url;
       d.appendChild(a);
     });
     return d;
   }
 
   // Rivela la risposta (già completa) in modo rapido, così un testo lungo non compare di colpo.
-  function reveal(text, prose) {
+  function reveal(text, bubble) {
     return new Promise((resolve) => {
       let i = 0;
-      prose.classList.add("caret");
+      bubble.hidden = false;
+      bubble.classList.add("caret");
       const step = Math.max(4, Math.ceil(text.length / 120));
       (function tick() {
-        if (!busy) { i = text.length; }   // interrotto: mostra tutto
+        if (!busy) i = text.length;   // interrotto: mostra tutto
         i = Math.min(text.length, i + step);
-        prose.innerHTML = md(text.slice(0, i));
+        bubble.innerHTML = md(text.slice(0, i));
         scrollDown();
         if (i < text.length) return setTimeout(tick, 16);
-        prose.classList.remove("caret");
+        bubble.classList.remove("caret");
         resolve();
       })();
     });
@@ -199,23 +434,26 @@
   async function send(text) {
     text = text.trim();
     if (!text || busy) return;
-    if (!thread.querySelector(".msg")) thread.innerHTML = "";
+    if (!thread.querySelector(".message-entry")) { thread.innerHTML = ""; thread.appendChild(timeMarker(new Date())); }
     thread.appendChild(userNode(text));
     input.value = ""; autosize();
 
-    const node = botNode(null);
-    const steps = node.querySelector(".steps"), prose = node.querySelector(".prose");
-    prose.innerHTML = '<span class="thinking" aria-label="L\'agente sta pensando"><i></i><i></i><i></i></span>';
+    const node = agentNode(null);
+    const activity = node.querySelector(".agent-activity"), bubble = node.querySelector(".ui-bubble");
+    bubble.hidden = false;
+    bubble.innerHTML = '<span class="thinking" role="status" aria-label="L\'agente sta pensando"><i></i><i></i><i></i></span>';
     thread.appendChild(node);
     scrollDown();
     setBusy(true);
     controller = new AbortController();
 
     const finish = (id, error) => {
-      const el = steps.querySelector(`[data-id="${CSS.escape(id)}"]`);
-      if (el) el.querySelector(".state").innerHTML = error ? icons.x : icons.check;
-      if (el && error) el.title = error;
+      const el = activity.querySelector(`[data-id="${CSS.escape(id)}"]`);
+      if (!el) return;
+      el.querySelector(".state").innerHTML = error ? ic("x", "bad") : ic("check", "ok");
+      if (error) el.title = error;
     };
+    const closeSpinners = (ok) => activity.querySelectorAll(".spin").forEach((sp) => (sp.parentElement.innerHTML = ic(ok ? "check" : "x", ok ? "ok" : "bad")));
 
     let answered = false, failed = null;
     try {
@@ -238,19 +476,18 @@
           let ev; try { ev = JSON.parse(line); } catch { continue; }
 
           if (ev.type === "step" && ev.phase === "start") {
-            if (!steps.children.length) prose.innerHTML = "";
-            steps.appendChild(stepNode(ev)); scrollDown();
+            bubble.hidden = true;   // niente puntini: l'attività è già visibile
+            activity.appendChild(stepNode(ev)); scrollDown();
           } else if (ev.type === "step") {
             finish(ev.id, ev.error);
           } else if (ev.type === "answer") {
             answered = true;
-            steps.querySelectorAll(".spin").forEach((sp) => sp.parentElement.innerHTML = icons.check);
-            prose.innerHTML = "";
-            await reveal(ev.text, prose);
-            const body = node.querySelector(".bot-body");
-            if (ev.sources?.length) body.appendChild(sourcesNode(ev.sources));
-            addActions(node, ev.text);
-            if (ev.metrics) { const m = document.createElement("div"); m.className = "metrics"; m.textContent = ev.metrics; body.appendChild(m); }
+            closeSpinners(true);
+            bubble.innerHTML = "";
+            await reveal(ev.text, bubble);
+            const shell = node.querySelector(".message-shell");
+            if (ev.sources?.length) shell.appendChild(sourcesNode(ev.sources));
+            addActions(node, ev.text, ev.metrics);
           } else if (ev.type === "notice") {
             toast(ev.message);
           } else if (ev.type === "error") {
@@ -260,17 +497,22 @@
       }
     } catch (e) {
       if (e.name === "AbortError") {
-        prose.classList.remove("caret");
-        if (!answered) prose.innerHTML = "<p><i>Risposta interrotta. L'agente può finire in background e la risposta resta salvata nella sessione.</i></p>";
+        bubble.classList.remove("caret");
+        if (!answered) {
+          closeSpinners(false);
+          bubble.hidden = false;
+          bubble.innerHTML = "<p><i>Risposta interrotta. L'agente può finire in background e la risposta resta salvata nella sessione.</i></p>";
+        }
       } else {
         failed = e.message;
       }
     }
 
     if (failed) {
-      steps.querySelectorAll(".spin").forEach((sp) => sp.parentElement.innerHTML = icons.x);
-      prose.classList.remove("caret");
-      prose.innerHTML = `<div class="error"><b>Errore.</b> ${esc(failed)}</div>`;
+      closeSpinners(false);
+      bubble.classList.remove("caret");
+      bubble.hidden = false;
+      bubble.innerHTML = `<div class="error"><b>Errore.</b> ${esc(failed)}</div>`;
     }
     controller = null;
     setBusy(false);
@@ -292,14 +534,11 @@
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!busy) send(input.value); }
   });
-  $("newChat").onclick = () => { newChat(); app.classList.remove("side-open"); };
-  $("openSide").onclick = () => app.classList.add("side-open");
-  $("closeSide").onclick = $("scrim").onclick = () => app.classList.remove("side-open");
 
   // Avvio: carica lo stato dal backend (stessa memoria della CLI).
   renderWelcome();
   api("/api/state").then(apply).catch(() => {
-    thread.innerHTML = '<div class="welcome"><h1>Backend non raggiungibile</h1><p>Avvia il server con <code>python -m deep_agents.server</code> e apri l\'indirizzo che stampa, invece di aprire il file HTML direttamente.</p></div>';
+    thread.innerHTML = '<div class="welcome"><span class="avatar" data-agent="other" aria-hidden="true"></span><h2>Backend non raggiungibile</h2><p>Avvia il server con <code>python -m deep_agents.server</code> e apri l\'indirizzo che stampa, invece di aprire il file HTML direttamente.</p></div>';
   });
   input.focus();
 })();

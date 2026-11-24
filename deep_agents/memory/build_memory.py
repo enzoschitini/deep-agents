@@ -39,8 +39,13 @@ class MemoryBuilder:
         session_id: str | None = None,
         file_path: str | Path | None = None,
     ) -> None:
-        self.storage = StorageMemory(self._resolve_database(database, file_path))
+        self.storage = StorageMemory(self._resolve_database(database, file_path), self._titles_file(database, file_path))
         self.session_id = session_id or self._unique_session_id()
+
+    @staticmethod
+    def _titles_file(database: str, file_path: str | Path | None) -> Path | None:
+        """Onde ficam os nomes das sessões: ao lado do CSV (o vetorial fake vive em RAM, então os nomes também)."""
+        return Path(file_path or DEFAULT_CSV).with_name("session_titles.json") if database == "local_csv" else None
 
     @staticmethod
     def _resolve_database(database: str, file_path: str | Path | None) -> MemoryRepository:
@@ -93,6 +98,22 @@ class MemoryBuilder:
 
     def sessions(self) -> list[SessionInfo]:
         return self.storage.sessions()
+
+    def rename_session(self, session_id: str, title: str) -> None:
+        self.storage.rename_session(session_id, title)
+
+    def delete_session(self, session_id: str) -> int:
+        """Apaga a sessão e devolve quantas mensagens saíram. Se era a atual, abre uma nova vazia."""
+        removed = self.storage.delete_session(session_id)
+        if session_id == self.session_id:
+            self.new_session()
+        return removed
+
+    def delete_all_sessions(self) -> int:
+        """Apaga todas as sessões e abre uma nova vazia."""
+        removed = self.storage.delete_all()
+        self.new_session()
+        return removed
 
     def message_count(self) -> int:
         return len(self.storage.get_messages(self.session_id))

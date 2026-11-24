@@ -15,6 +15,7 @@ from typing import Any, Iterator
 from langchain_core.callbacks import BaseCallbackHandler
 
 from deep_agents.bootstrap import Backend
+from deep_agents.cli.models import AVAILABLE_MODELS, resolve_choice
 from deep_agents.cli.renderer import format_metrics
 from deep_agents.utils.json_manager import extract_response_text, manage_result_json
 
@@ -71,13 +72,41 @@ class ChatService:
     def state(self) -> dict[str, Any]:
         return {
             "model": self.backend.gateway.config.spec,
+            "models": self.model_specs(),
             "session": self.memory.session_id,
             "messages": list(self.messages),
             "sessions": [
-                {"id": s.id, "count": s.count, "updated_at": s.updated_at, "preview": _clip(s.preview, 60)}
+                {"id": s.id, "count": s.count, "updated_at": s.updated_at, "preview": _clip(s.preview, 60), "title": s.title}
                 for s in self.memory.sessions()
             ],
         }
+
+    def model_specs(self) -> list[str]:
+        """Modelos oferecidos (os mesmos do /modello da CLI); o atual entra na lista mesmo se não for um deles."""
+        specs = [m.spec for m in AVAILABLE_MODELS]
+        current = self.backend.gateway.config.spec
+        return specs if current in specs else [current, *specs]
+
+    def set_model(self, choice: str) -> str | None:
+        """Troca o modelo como o /modello da CLI: reconstrói agente e gateway; em caso de erro mantém o anterior.
+        Devolve None se deu certo, ou a mensagem de erro."""
+        if not self._busy.acquire(blocking=False):
+            return "c'è una risposta in corso: attendi che finisca"
+        try:
+            current = self.backend.gateway.config
+            new_config = resolve_choice(choice, AVAILABLE_MODELS, current)
+            if new_config is None:
+                return "modello non valido: usa il formato provider:modello"
+            if new_config.spec == current.spec:
+                return None
+            try:
+                agent, gateway = self.backend.create_agent(new_config)
+            except Exception as e:
+                return f"impossibile usare {new_config.spec}: {type(e).__name__}: {str(e).strip()[:200]}"
+            self.backend.agent, self.backend.gateway = agent, gateway
+            return None
+        finally:
+            self._busy.release()
 
     def new_session(self) -> bool:
         if not self._busy.acquire(blocking=False):
@@ -85,6 +114,37 @@ class ChatService:
         try:
             self.messages = []
             self.memory.new_session()
+            return True
+        finally:
+            self._busy.release()
+
+    def rename_session(self, session_id: str, title: str) -> bool:
+        if not any(s.id == session_id for s in self.memory.sessions()):
+            return False
+        self.memory.rename_session(session_id, title)
+        return True
+
+    def delete_session(self, session_id: str) -> bool:
+        """Apaga uma sessão salva (a mesma da CLI). Se era a que está aberta, a conversa volta ao início."""
+        if not self._busy.acquire(blocking=False):
+            return False
+        try:
+            if not any(s.id == session_id for s in self.memory.sessions()):
+                return False
+            was_current = session_id == self.memory.session_id
+            self.memory.delete_session(session_id)
+            if was_current:
+                self.messages = []
+            return True
+        finally:
+            self._busy.release()
+
+    def delete_all_sessions(self) -> bool:
+        if not self._busy.acquire(blocking=False):
+            return False
+        try:
+            self.memory.delete_all_sessions()
+            self.messages = []
             return True
         finally:
             self._busy.release()
