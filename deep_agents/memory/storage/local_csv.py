@@ -20,6 +20,7 @@ def _tokens(text: str) -> set[str]:
 class LocalCSV(MemoryRepository):
     def __init__(self, file_path: str | Path) -> None:
         self.file_path = Path(file_path)
+        self.file_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _read(self) -> list[MemoryRecord]:
         if not self.file_path.exists() or self.file_path.stat().st_size == 0:

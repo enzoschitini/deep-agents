@@ -14,7 +14,7 @@ from deep_agents.memory.storage.storage_memory import MemoryRepository, SessionI
 from deep_agents.memory.config import KEEP_MESSAGES, SUMMARY_TRIGGER_TOKENS, TRIM_TOKENS_TO_SUMMARIZE
 from deep_agents.prompts.system import SUMMARY_PROMPT
 
-DEFAULT_CSV = Path(__file__).resolve().parent / "local_database.csv"
+DEFAULT_CSV = Path(__file__).resolve().parents[1] / "data" / "local_database.csv"   # deep_agents/data/ (fora do git)
 _CHAT_ROLE = {"human": "user", "ai": "assistant"}  # papéis no formato de mensagens do chat
 
 
