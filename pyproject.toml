@@ -9,6 +9,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "langchain-anthropic>=1.7.4",
     "langchain-openai>=1.8.3",
+    "langchain-quickjs>=0.3.9",
     "prompt-toolkit>=3.0.53",
     "rich>=15.0.0",
     "tavily-python>=0.8.5",
