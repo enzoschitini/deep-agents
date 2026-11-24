@@ -33,6 +33,13 @@
       if (i % 2) return `<pre><code>${esc(chunk.replace(/\n$/, ""))}</code></pre>`;
       return chunk.trim().split(/\n{2,}/).filter(Boolean).map((block) => {
         const lines = block.split("\n");
+        if (/^\s*([-*_])\1{2,}\s*$/.test(block)) return "<hr>";
+        if (lines.length >= 2 && lines.every((l) => /^\s*\|.*\|\s*$/.test(l)) && /^\s*\|[\s:|-]+\|\s*$/.test(lines[1])) {
+          const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+          const align = cells(lines[1]).map((c) => (/^:-+:$/.test(c) ? "center" : /-:$/.test(c) ? "right" : ""));
+          const row = (l, tag) => `<tr>${cells(l).map((c, i) => `<${tag}${align[i] ? ` style="text-align:${align[i]}"` : ""}>${inline(c)}</${tag}>`).join("")}</tr>`;
+          return `<div class="table-wrap"><table><thead>${row(lines[0], "th")}</thead><tbody>${lines.slice(2).map((l) => row(l, "td")).join("")}</tbody></table></div>`;
+        }
         const head = block.match(/^(#{1,4})\s+(.*)$/);
         if (head && lines.length === 1) return `<h4>${inline(head[2])}</h4>`;
         if (lines.every((l) => /^\s*[-*] /.test(l))) return `<ul>${lines.map((l) => `<li>${inline(l.replace(/^\s*[-*] /, ""))}</li>`).join("")}</ul>`;
