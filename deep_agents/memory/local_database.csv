@@ -198,3 +198,28 @@ f2f5b497,20261124-082652,ai,"Oi! Sou a Laura, como posso ajudar?",2026-11-24T11:
 - **Final:** **Contiva** venceu Granumi pela associação com “conta” e pela facilidade de pronúncia.
 
 O julgamento é subjetivo, e a disponibilidade de marca e domínio não foi verificada.",2026-11-24T11:32:53+00:00
+7ffa3001,20261124-084854,human,Ciao!,2026-11-24T11:49:02+00:00
+03c52d59,20261124-084854,ai,Ciao! Como posso ajudar?,2026-11-24T11:49:02+00:00
+1b20d468,20261124-084854,human,Qual seu nome?,2026-11-24T11:50:06+00:00
+c75f0f6e,20261124-084854,ai,Meu nome é Laura.,2026-11-24T11:50:06+00:00
+041624a5,20261124-084854,human,Você sabe o meu?,2026-11-24T11:50:15+00:00
+c7bf94f8,20261124-084854,ai,"Ainda não, você não me disse seu nome. Como você se chama?",2026-11-24T11:50:15+00:00
+c64c9285,20261124-084854,human,Anna,2026-11-24T11:50:28+00:00
+e4708e3c,20261124-084854,ai,"Prazer, Anna!",2026-11-24T11:50:28+00:00
+1ce47372,20261124-084854,human,Quais a classificação dos 10 primeiros times da LaLiga?,2026-11-24T11:51:08+00:00
+03d55b68,20261124-084854,ai,"Anna, a classificação dos **10 primeiros da LaLiga 2026/27**, conforme a [ESPN](https://www.espn.com/soccer/standings/_/league/esp.1) consultada em **24/11/2026**, é:
+
+| Posição | Time |
+|---|---|
+| 1º | Barcelona |
+| 2º | Real Madrid |
+| 3º | Atlético de Madrid |
+| 4º | Real Betis |
+| 5º | Real Sociedad |
+| 6º | Sevilla |
+| 7º | Racing Santander |
+| 8º | Athletic Club |
+| 9º | Alavés |
+| 10º | Villarreal |
+
+**Ressalva:** a [Goal](https://www.goal.com/en-us/competition/laliga/table/34pl8szyvrbwcmfkuocjm3r6t) apresenta diferenças a partir do 7º lugar, portanto há divergência de atualização entre as fontes.",2026-11-24T11:51:08+00:00

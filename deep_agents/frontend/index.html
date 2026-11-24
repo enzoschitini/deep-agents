@@ -42,8 +42,8 @@
           <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
         </button>
         <div class="model">
-          <span class="dot"></span> Agente principale
-          <span class="muted">con 2 subagent</span>
+          <span class="dot"></span> <span id="model">…</span>
+          <span class="muted">con subagent</span>
         </div>
       </header>
 
@@ -62,8 +62,9 @@
             </button>
           </div>
         </form>
-        <p class="disclaimer">Interfaccia dimostrativa: le risposte sono simulate e non c'è nessun backend collegato.</p>
+        <p class="disclaimer">Stesso agente e stesse sessioni della CLI. Può sbagliare: verifica le fonti.</p>
       </footer>
+      <div class="toast" id="toast" role="status" hidden></div>
     </main>
   </div>
   <script src="app.js"></script>

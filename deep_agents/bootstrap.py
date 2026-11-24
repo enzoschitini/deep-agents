@@ -1,0 +1,69 @@
+"""Configuração e montagem do agente, compartilhadas pela CLI (`cli/__main__.py`) e pelo servidor web (`server/`).
+
+Aqui vivem o modelo inicial, a toolkit e os subagents. Os dois entry points só decidem COMO falar com o agente."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Callable
+
+from deep_agents.agent import AgentBuilder
+from deep_agents.memory.build_memory import MemoryBuilder
+from deep_agents.model.model_config import ModelConfig
+from deep_agents.subagents.build_subagents import SubagentBuilder
+from deep_agents.toolkit.build_toolkit import ToolkitBuilder
+from deep_agents.toolkit.side_channel import SideChannel
+
+# Modelo inicial, no formato "provider:modelo". Na CLI: "/" lista os comandos e "/modello" troca de modelo.
+#   openai:gpt-5.4 · openai:gpt-5-mini · anthropic:claude-sonnet-5-5 · google_genai:...
+MODEL_SPEC = "openai:gpt-6.1-sol"
+
+MODEL = ModelConfig.from_spec(
+    MODEL_SPEC,
+    temperature=None,   # None = padrão do modelo (ou 0.0–2.0). Na CLI: /temperatura
+    thinking=None,      # None = padrão | "off" | "low" | "medium" | "high". Na CLI: /thinking
+    timeout=120,
+    max_retries=2,
+    # max_tokens=..., extra={...}  # controles opcionais
+)
+
+# Toolkit: {grupo: {"enabled": bool, "tools": [nomes] | None (= todas do grupo)}}
+TOOLKIT = {
+    "tavily": {"enabled": True, "tools": None},
+}
+
+# Subagents que o agente principal pode chamar (tool `task`): {subagent: {"enabled": bool}}
+SUBAGENTS = {
+    "pesquisador": {"enabled": True},
+    "redator": {"enabled": True},
+}
+
+# Subagents dinâmicos: o principal ganha a tool `eval` (REPL JavaScript) e despacha os subagents acima com `task()`
+# em loops/Promise.all (lotes, votação, torneio). Só é usado quando o pedido contém "workflow" (ver rules/09_workflow.md).
+# "max_concurrency": None = padrão de `config.DYNAMIC_MAX_CONCURRENCY`.
+DYNAMIC_SUBAGENTS = {"enabled": True, "max_concurrency": None}
+
+
+@dataclass
+class Backend:
+    """Tudo o que um entry point precisa para conversar com o agente."""
+
+    agent: Any
+    gateway: Any
+    memory: MemoryBuilder
+    toolkit: ToolkitBuilder
+    create_agent: Callable[[ModelConfig], tuple[Any, Any]]   # refaz (agent, gateway) com outro modelo/temperatura/thinking
+
+
+def build_backend(model: ModelConfig = MODEL, *, memory: MemoryBuilder | None = None) -> Backend:
+    """Monta memória, canal lateral, toolkit, subagents e o agente. Levanta a exceção original se o agente não subir."""
+    memory = memory or MemoryBuilder()   # sessão nova e vazia; compartilhada entre as reconstruções do agente
+    channel = SideChannel(session_provider=lambda: memory.session_id)   # canal lateral das tools (fontes etc.)
+    toolkit = ToolkitBuilder(TOOLKIT, channel=channel)   # criado uma vez: sobrevive às reconstruções do agente
+    subagents = SubagentBuilder(SUBAGENTS)
+
+    def create_agent(config: ModelConfig):
+        return AgentBuilder(config, memory=memory, toolkit=toolkit, subagents=subagents, dynamic=DYNAMIC_SUBAGENTS).build()
+
+    agent, gateway = create_agent(model)
+    return Backend(agent, gateway, memory, toolkit, create_agent)
