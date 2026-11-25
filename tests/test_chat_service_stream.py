@@ -33,7 +33,7 @@ class FakeMemory:
 
 def make_backend(memory=None):
     return SimpleNamespace(agent="AGENT", gateway=SimpleNamespace(config=SimpleNamespace(spec="fake:m")),
-                           memory=memory or FakeMemory(), toolkit=SimpleNamespace(channel="CHANNEL"))
+                           memory=memory or FakeMemory(), toolkit=SimpleNamespace(channel="CHANNEL"), tracer=None)
 
 
 class _Handle:
@@ -56,8 +56,8 @@ def install(monkeypatch):
                                  error=error, cancelled=False, sources=[{"url": "u", "title": "t", "domain": "d"}])
 
         class FakeStreamer:
-            def __init__(self, agent, gateway=None, *, options=None, channel=None, sinks=()):
-                seen.update(agent=agent, gateway=gateway, options=options, channel=channel)
+            def __init__(self, agent, gateway=None, *, options=None, channel=None, sinks=(), tracer=None, origin=None):
+                seen.update(agent=agent, gateway=gateway, options=options, channel=channel, tracer=tracer, origin=origin)
 
             def start(self, messages, **kw):
                 seen["messages"] = list(messages)

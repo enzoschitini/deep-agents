@@ -155,7 +155,8 @@ class ChatService:
         limit = Visibility.DEBUG if debug else Visibility.SECONDARY
         self.messages.append({"role": "user", "content": text})
         try:
-            streamer = AgentStreamer(backend.agent, backend.gateway, options=STREAMING, channel=backend.toolkit.channel)
+            streamer = AgentStreamer(backend.agent, backend.gateway, options=STREAMING, channel=backend.toolkit.channel,
+                                    tracer=backend.tracer, origin="web")
             handle = streamer.start(list(self.messages))   # cópia: o LangGraph converte a lista no lugar
             run_end: dict[str, Any] | None = None
             for ev in handle:

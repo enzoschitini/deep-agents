@@ -78,12 +78,15 @@ class RunHandle:
 
 class AgentStreamer:
     def __init__(self, agent: Any, gateway: Any = None, *, options: StreamOptions | None = None,
-                 channel: Any = None, sinks: tuple | list = ()) -> None:
+                 channel: Any = None, sinks: tuple | list = (), tracer: Any = None, origin: str | None = None) -> None:
+        """`tracer` (um `tracing.Tracer`) grava o rastreamento detalhado de cada run em JSON; `origin` ("cli", "web"…) vai junto."""
         self.agent = agent
         self.gateway = gateway
         self.options = options or StreamOptions()
         self.channel = channel
         self.sinks = list(sinks)
+        self.tracer = tracer
+        self.origin = origin
 
     # -- API pública --
     def start(self, messages: list[dict], *, label: str | None = None, config: dict | None = None) -> RunHandle:
@@ -98,10 +101,15 @@ class AgentStreamer:
         run = _Run(
             agent=self.agent, gateway=self.gateway, options=self.options, channel=self.channel,
             run_id=run_id, bus=bus, label=label, config=dict(config or {}), messages=list(messages),
+            tracer=self.tracer,
             response=ResponseStreamer(bus, registry, self.options),
             actions=ActionTracker(bus, registry, self.options),
         )
         run.turn = self.channel.begin_turn() if self.channel is not None else None
+        if self.tracer is not None:   # antes do RUN/START: o sink já recebe o primeiro evento
+            self.tracer.begin_run(run_id, messages=list(messages), label=label, origin=self.origin,
+                                  model_config=getattr(self.gateway, "config", None), turn=run.turn)
+            bus.add_sink(self.tracer.sink(run_id))
         handle = RunHandle(run_id, bus, run.result, run.cancel_event, run.on_cancel, run.done)
         bus.emit(bus.make(
             EventKind.RUN, Phase.START, id=run_id, label="Avvio la richiesta…", visibility=Visibility.PRIMARY,
@@ -138,7 +146,8 @@ class _Run:
     """Estado e corpo de UM run (executa na thread de trabalho)."""
 
     def __init__(self, *, agent, gateway, options, channel, run_id, bus, label, config, messages,
-                 response, actions) -> None:
+                 response, actions, tracer=None) -> None:
+        self.tracer = tracer
         self.agent, self.gateway, self.options, self.channel = agent, gateway, options, channel
         self.run_id, self.bus = run_id, bus
         self.label, self.config, self.messages = label, config, messages
@@ -219,12 +228,17 @@ class _Run:
                     error=str(e) or type(e).__name__, visibility=Visibility.PRIMARY, data={"type": type(e).__name__},
                 ))
         finally:
+            try:
+                self._trace_end()   # grava os JSONs antes de fechar o fluxo: quem acabou de iterar já os encontra
+            except BaseException:   # noqa: BLE001 - o rastreamento nunca derruba o run
+                pass
             self.bus.close()
             self.done.set()
 
     def _consume(self, handlers: list) -> dict | None:
         bus, response, actions = self.bus, self.response, self.actions
-        cfg = {**self.config, "callbacks": [*self.config.get("callbacks", []), *handlers, actions.handler]}
+        extra = [h for h in [self.tracer.callback(self.run_id) if self.tracer is not None else None] if h is not None]
+        cfg = {**self.config, "callbacks": [*self.config.get("callbacks", []), *handlers, actions.handler, *extra]}
         state: dict | None = None
         stream = self.agent.stream(
             {"messages": self.messages}, config=cfg, stream_mode=STREAM_MODES, subgraphs=True, version="v2",
@@ -312,6 +326,20 @@ class _Run:
             data["metrics"] = self._safe(res.report.summary, None)
         bus.emit(bus.make(EventKind.RUN, Phase.END, id=self.run_id, label="Risposta completata.",
                           visibility=Visibility.PRIMARY, data=data))
+
+    def _trace_end(self) -> None:
+        """Fecha o rastreamento (grava os JSONs). Roda na thread de trabalho, ANTES de o fluxo de eventos fechar."""
+        if self.tracer is None:
+            return
+        res = self.result
+        status = "cancelled" if (res.cancelled or self.cancel_event.is_set()) else ("error" if res.error is not None else "completed")
+        publications = []
+        if self.channel is not None and self.turn is not None:
+            publications = self._safe(lambda: self.channel.query(turn=self.turn), [])
+        self.tracer.end_run(
+            self.run_id, status=status, answer=res.answer, state=res.state, report=res.report, stats=res.stats,
+            sources=res.sources, publications=publications, error=res.error,
+        )
 
     def _final_answer(self, state: dict | None) -> str:
         """O texto da última mensagem do estado é a verdade; os deltas são provisórios."""

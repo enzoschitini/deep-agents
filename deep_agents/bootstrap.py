@@ -15,6 +15,7 @@ from deep_agents.streaming.options import StreamOptions
 from deep_agents.subagents.build_subagents import SubagentBuilder
 from deep_agents.toolkit.build_toolkit import ToolkitBuilder
 from deep_agents.toolkit.side_channel import SideChannel
+from deep_agents.tracing import TraceOptions, Tracer, build_config_snapshot
 
 # Modelo inicial, no formato "provider:modelo". Na CLI: "/" lista os comandos e "/modello" troca de modelo.
 #   openai:gpt-5.4 · openai:gpt-5-mini · anthropic:claude-sonnet-5-5 · google_genai:...
@@ -50,6 +51,10 @@ DYNAMIC_SUBAGENTS = {"enabled": True, "max_concurrency": None}
 # que os tokens delas não vazem como resposta.
 STREAMING = StreamOptions(granularity="word", summary_marker=SUMMARY_PROMPT[:40])
 
+# Rastreamento (o "LangSmith" local): cada resposta grava uma pasta de JSONs em `data/tracing/` (ver tracing/README.md).
+# `enabled=False` (ou DEEP_AGENTS_TRACING=0) desliga. `summary_marker` marca as chamadas de resumo de contexto.
+TRACING = TraceOptions(summary_marker=SUMMARY_PROMPT[:40])
+
 
 @dataclass
 class Backend:
@@ -60,6 +65,7 @@ class Backend:
     memory: MemoryBuilder
     toolkit: ToolkitBuilder
     create_agent: Callable[[ModelConfig], tuple[Any, Any]]   # refaz (agent, gateway) com outro modelo/temperatura/thinking
+    tracer: Tracer | None = None                              # rastreamento em JSON (passe ao AgentStreamer)
 
 
 def build_backend(model: ModelConfig = MODEL, *, memory: MemoryBuilder | None = None) -> Backend:
@@ -72,5 +78,11 @@ def build_backend(model: ModelConfig = MODEL, *, memory: MemoryBuilder | None = 
     def create_agent(config: ModelConfig):
         return AgentBuilder(config, memory=memory, toolkit=toolkit, subagents=subagents, dynamic=DYNAMIC_SUBAGENTS).build()
 
+    tracer = Tracer(
+        TRACING,
+        config_snapshot=lambda cfg: build_config_snapshot(
+            cfg, toolkit=TOOLKIT, subagents=SUBAGENTS, dynamic=DYNAMIC_SUBAGENTS, streaming=STREAMING),
+        session_provider=lambda: memory.session_id,
+    )
     agent, gateway = create_agent(model)
-    return Backend(agent, gateway, memory, toolkit, create_agent)
+    return Backend(agent, gateway, memory, toolkit, create_agent, tracer)

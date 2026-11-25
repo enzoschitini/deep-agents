@@ -47,13 +47,16 @@ class ChatCLI:
         memory: Any | None = None,
         toolkit: Any | None = None,
         stream_options: StreamOptions | None = None,
+        tracer: Any | None = None,
     ) -> None:
         """`agent_factory(model_config) -> (agent, gateway)` habilita o comando /modello.
         `memory` (um `MemoryBuilder`) habilita as sessões: grava cada turno e o comando /sessioni.
         `toolkit` (um `ToolkitBuilder`) dá o canal lateral ao streamer (seção de fontes).
-        `stream_options` (`StreamOptions`) configura o streaming da resposta (granularidade etc.)."""
+        `stream_options` (`StreamOptions`) configura o streaming da resposta (granularidade etc.).
+        `tracer` (um `Tracer`) grava o rastreamento detalhado de cada turno em `data/tracing/`."""
         self.channel = toolkit.channel if toolkit is not None else None
         self.stream_options = stream_options
+        self.tracer = tracer
         self.verbosity = "off"   # /dettagli: off (só o essencial) | on (secundários) | debug
         self.agent = agent
         self.gateway = gateway
@@ -108,7 +111,8 @@ class ChatCLI:
 
     def _send(self, text: str) -> None:
         self.messages.append({"role": "user", "content": text})
-        streamer = AgentStreamer(self.agent, self.gateway, options=self.stream_options, channel=self.channel)
+        streamer = AgentStreamer(self.agent, self.gateway, options=self.stream_options, channel=self.channel,
+                                tracer=self.tracer, origin="cli")
         # Cópia: o LangGraph converte, no lugar, os itens da lista recebida em objetos de mensagem.
         handle = streamer.start(list(self.messages))
         try:

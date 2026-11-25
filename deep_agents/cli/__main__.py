@@ -31,7 +31,7 @@ def chat_loop(model: ModelConfig = MODEL) -> None:
         sys.exit(1)
     ChatCLI(
         backend.agent, backend.gateway, agent_factory=backend.create_agent, memory=backend.memory, toolkit=backend.toolkit,
-        stream_options=STREAMING,
+        stream_options=STREAMING, tracer=backend.tracer,
     ).run()
 
 
