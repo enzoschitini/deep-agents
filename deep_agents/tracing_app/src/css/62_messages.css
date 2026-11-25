@@ -1,0 +1,109 @@
+/* Mensagens estilo chat (TA.ui.messages) e markdown (TA.ui.markdown). Prefixo: .ms- */
+
+/* ---- markdown ---- */
+.ms-md { line-height: 1.55; color: var(--text); word-break: break-word; overflow-wrap: anywhere; }
+.ms-md > :first-child { margin-top: 0; }
+.ms-md > :last-child { margin-bottom: 0; }
+.ms-p { margin: 0 0 9px; }
+.ms-h { margin: 14px 0 6px; line-height: 1.3; }
+.ms-h1 { font-size: 18px; } .ms-h2 { font-size: 16px; } .ms-h3 { font-size: 14.5px; }
+.ms-h4, .ms-h5, .ms-h6 { font-size: 13.5px; color: var(--text-2); }
+.ms-md ul, .ms-md ol { margin: 0 0 9px; padding-left: 22px; }
+.ms-md li { margin: 2px 0; }
+.ms-md li > .ms-p { margin: 0; }
+.ms-md li > ul, .ms-md li > ol { margin: 3px 0 3px; }
+.ms-task { margin-right: 5px; color: var(--muted); }
+.ms-quote { margin: 0 0 9px; padding: 2px 0 2px 12px; border-left: 3px solid var(--border-strong); color: var(--text-2); }
+.ms-hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; }
+.ms-icode { background: var(--panel-3); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+.ms-link { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
+.ms-codeblock { margin: 0 0 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-2); overflow: hidden; }
+.ms-codehead { display: flex; align-items: center; gap: 6px; padding: 3px 6px 3px 10px; background: var(--panel-3); font-size: 11px; color: var(--muted); }
+.ms-codehead .copy { position: static; opacity: 1; }
+.ms-codeblock pre { margin: 0; padding: 9px 12px; overflow: auto; max-height: 420px; white-space: pre; }
+.ms-codeblock code { font-family: var(--font-mono); font-size: 12.5px; }
+.ms-table-wrap { overflow: auto; margin: 0 0 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.ms-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.ms-table th { background: var(--panel-2); text-align: left; font-weight: 600; }
+.ms-table th, .ms-table td { padding: 5px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); vertical-align: top; }
+.ms-table th:last-child, .ms-table td:last-child { border-right: 0; }
+.ms-table tr:last-child td { border-bottom: 0; }
+.ms-cut { color: var(--muted); font-size: 12px; margin-top: 8px; }
+.ms-pre { margin: 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; color: var(--text); }
+.ms-note { color: var(--muted); font-size: 12.5px; padding: 4px 0; }
+.ms-more, .ms-showall { border: 0; background: transparent; padding: 0; color: var(--accent-strong); cursor: pointer; font-size: 12px; font-weight: 500; }
+.ms-more:hover, .ms-showall:hover { text-decoration: underline; }
+.ms-showall { margin-top: 6px; display: inline-block; }
+
+/* ---- lista de mensagens ---- */
+.ms-wrap { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ms-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ms-statline { color: var(--muted); font-size: 12.5px; }
+.ms-list { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ms-msg {
+  --rc: var(--muted); --rs: var(--panel-3);
+  border: 1px solid var(--border); border-left: 3px solid var(--rc); border-radius: var(--radius); background: var(--panel); min-width: 0;
+}
+.ms-role-human { --rc: var(--info); --rs: var(--info-soft); }
+.ms-role-ai { --rc: var(--accent); --rs: var(--accent-soft); }
+.ms-role-tool { --rc: var(--purple); --rs: var(--purple-soft); }
+.ms-role-system { --rc: var(--muted); --rs: var(--panel-3); }
+.ms-msg.ms-err { --rc: var(--err); --rs: var(--err-soft); border-color: var(--err); background: var(--err-soft); }
+.ms-head { display: flex; align-items: center; gap: 8px; padding: 7px 10px; min-width: 0; cursor: pointer; flex-wrap: wrap; row-gap: 4px; }
+.ms-chev { border: 0; background: transparent; padding: 2px; cursor: pointer; color: var(--muted); display: inline-flex; border-radius: 4px; }
+.ms-chev:hover { background: var(--hover); }
+.ms-chev .ico { transition: transform .12s; }
+.ms-open > .ms-head .ms-chev .ico { transform: rotate(90deg); }
+.ms-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--rs); color: var(--rc); display: inline-grid; place-items: center; flex: none; }
+.ms-role { font-weight: 650; font-size: 12.5px; }
+.ms-toolname { color: var(--purple); }
+.ms-id { cursor: pointer; }
+.ms-id:hover { border-color: var(--accent); }
+.ms-reflink { font-size: 12px; display: inline-flex; align-items: center; gap: 3px; }
+.ms-preview { color: var(--muted); font-size: 12px; min-width: 0; flex: 1 1 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-open > .ms-head .ms-preview { display: none; }
+.ms-stat { color: var(--muted); font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ms-modes { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; background: var(--panel); }
+.ms-modebtn { border: 0; background: transparent; cursor: pointer; padding: 0 7px; height: 22px; font-size: 11px; color: var(--text-2); border-right: 1px solid var(--border); }
+.ms-modebtn:last-child { border-right: 0; }
+.ms-modebtn:hover { background: var(--hover); }
+.ms-modebtn.on { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+.ms-head .copy { opacity: 1; }
+.ms-sub { padding: 0 12px 6px 42px; color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-sub code { font-size: 11.5px; }
+.ms-body { display: none; padding: 2px 14px 12px 42px; min-width: 0; }
+.ms-open > .ms-body { display: block; }
+.ms-parts { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ms-clip { position: relative; }
+.ms-clipped { max-height: 240px; overflow: hidden; }
+.ms-clipped::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(to bottom, transparent, var(--panel)); pointer-events: none; }
+.ms-msg.ms-err .ms-clipped::after { background: linear-gradient(to bottom, transparent, var(--err-soft)); }
+.ms-msg.ms-err .ms-pre, .ms-msg.ms-err .ms-md { color: var(--err); }
+.ms-rawjson { overflow: auto; max-height: 520px; }
+
+/* ---- reasoning / blocos extras ---- */
+.ms-reason { border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); padding: 6px 10px; background: var(--panel-2); }
+.ms-reason > summary { cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 500; user-select: none; }
+.ms-reason[open] > summary { margin-bottom: 6px; }
+
+/* ---- tool calls ---- */
+.ms-call { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-2); overflow: hidden; }
+.ms-call-head { display: flex; align-items: center; gap: 7px; padding: 5px 8px; background: var(--panel-3); flex-wrap: wrap; }
+.ms-call-head .copy { opacity: 1; }
+.ms-call-name { font-family: var(--font-mono); font-weight: 650; font-size: 12.5px; color: var(--purple); }
+.ms-call-args { padding: 8px 10px; overflow: auto; max-height: 360px; }
+
+/* ---- resultados de busca ---- */
+.ms-results { display: flex; flex-direction: column; gap: 10px; }
+.ms-res-count { color: var(--muted); font-size: 12px; }
+.ms-res { display: flex; gap: 10px; padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); }
+.ms-res-n { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--panel-3); color: var(--text-2); font-size: 11px; font-weight: 600; display: grid; place-items: center; }
+.ms-res-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.ms-res-main > a, .ms-res-title { font-weight: 600; font-size: 13.5px; overflow-wrap: anywhere; }
+.ms-res-url { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11.5px; min-width: 0; }
+.ms-res-snip { color: var(--text-2); font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+/* complementos */
+.ms-codelang { font-family: var(--font-mono); text-transform: lowercase; }
+.ms-list-md { list-style-position: outside; }
+.ms-list-md ul, .ms-list-md ol { margin-top: 3px; }
