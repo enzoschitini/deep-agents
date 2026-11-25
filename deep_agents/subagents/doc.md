@@ -1,0 +1,3 @@
+Pesquisador por ângulo. O principal decompõe a pergunta e dispara N subagents em paralelo, cada um com internet_search. Os resultados brutos das buscas ficam fora do contexto principal, que é justo a dor descrita no seu CLAUDE.md. É o mais útil de verdade.
+Verificador de fontes. Recebe o rascunho e confere cada afirmação em duas fontes, como pede a regra 05_honestidade. É um papel diferente, com um prompt próprio e curto.
+Subagent simulado e determinístico, sem API, no estilo do conversor. Serve só para testar o encanamento (métricas, renderer, limite) de graça e offline, como você já faz com ScriptedChat nos testes.

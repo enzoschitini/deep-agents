@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#1a1a1a">
+  <title>Deep Agents</title>
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-latin.woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Simboli SVG riusati: icone (tratto 1.5) e il volto degli agenti -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-bot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M13 5h8M13 12h8M13 19h8M3 17l2 2 4-4M3 7l2 2 4-4"/></symbol>
+      <symbol id="i-panel" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-chevrons" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></symbol>
+      <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0 5 5L11 20a2.1 2.1 0 0 1-3-3l8.7-8.7z"/></symbol>
+      <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+      <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></symbol>
+      <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="app-window" id="app">
+    <nav class="window-rail" aria-label="Pagine">
+      <div class="window-rail-group">
+        <button type="button" class="rail-button" aria-label="Chat" aria-current="page" title="Chat"><svg class="icon"><use href="#i-bot"/></svg></button>
+        <button type="button" class="rail-button" id="railSessions" aria-label="Mostra o nascondi le sessioni" title="Sessioni"><svg class="icon"><use href="#i-list"/></svg></button>
+      </div>
+      <div class="window-rail-end">
+        <button type="button" class="rail-button rail-brand" id="railBrand" aria-label="Deep Agents" title="Deep Agents">
+          <span class="avatar avatar-sm" data-agent="main" aria-hidden="true"></span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="app-frame" id="frame">
+      <aside class="sidebar" id="sidebar" aria-label="Sessioni">
+        <div class="sidebar-topbar">
+          <div class="sidebar-server">
+            <span class="avatar avatar-xs" data-agent="main" aria-hidden="true"></span>
+            <span class="sidebar-server-name">Deep Agents</span>
+          </div>
+          <div class="sidebar-topbar-actions">
+            <button type="button" class="icon-button" id="clearAll" aria-label="Elimina tutte le conversazioni" title="Elimina tutte le conversazioni"><svg class="icon"><use href="#i-trash"/></svg></button>
+            <button type="button" class="icon-button" id="collapseSide" aria-label="Chiudi la barra laterale" title="Chiudi la barra laterale"><svg class="icon"><use href="#i-panel"/></svg></button>
+          </div>
+        </div>
+        <div class="sidebar-search-wrap">
+          <label class="search-field">
+            <svg class="icon icon-sm"><use href="#i-search"/></svg>
+            <input id="search" type="search" placeholder="Cerca" autocomplete="off" aria-label="Cerca nelle sessioni">
+          </label>
+          <button type="button" class="icon-button icon-button-lg" id="newChat" aria-label="Nuova chat" title="Nuova chat"><svg class="icon"><use href="#i-plus"/></svg></button>
+        </div>
+        <nav class="agent-list" id="history" aria-label="Elenco delle sessioni"></nav>
+      </aside>
+
+      <main class="conversation-panel" aria-label="Conversazione">
+        <header class="conversation-header">
+          <div class="conversation-heading-group">
+            <button type="button" class="icon-button only-narrow" id="openSide" aria-label="Apri la barra laterale"><svg class="icon"><use href="#i-panel"/></svg></button>
+            <button type="button" class="icon-button only-collapsed" id="expandSide" aria-label="Apri la barra laterale" title="Apri la barra laterale"><svg class="icon"><use href="#i-panel"/></svg></button>
+            <div class="conversation-title">
+              <span class="avatar avatar-xs" data-agent="main" aria-hidden="true"></span>
+              <h1 class="conversation-agent-heading"><span class="conversation-agent-name">Agente principale</span><span class="conversation-agent-title">con subagent</span></h1>
+            </div>
+          </div>
+          <div class="header-right">
+          <button type="button" class="details-toggle" id="detailsBtn" aria-pressed="false" title="Mostra anche i passaggi secondari (file, chiamate al modello, ragionamento)">Dettagli</button>
+          <div class="model-picker">
+            <button type="button" class="provider-model-trigger" id="modelBtn" aria-haspopup="menu" aria-expanded="false" title="Cambia modello">
+              <span class="provider-mark" aria-hidden="true"></span>
+              <span id="model">…</span>
+              <svg class="icon icon-sm"><use href="#i-chevron"/></svg>
+            </button>
+            <div class="menu menu-right" id="modelMenu" role="menu" hidden></div>
+          </div>
+          </div>
+          <span class="tab-shape" aria-hidden="true"></span>
+        </header>
+
+        <div class="conversation-scroll" id="scroll">
+          <div class="thread" id="thread"></div>
+        </div>
+
+        <div class="composer-wrap">
+          <form class="composer" id="form">
+            <div class="composer-menu-anchor">
+              <button type="button" class="composer-button" id="plusBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Suggerimenti" title="Suggerimenti"><svg class="icon"><use href="#i-plus"/></svg></button>
+              <div class="menu" id="plusMenu" role="menu" hidden></div>
+            </div>
+            <textarea id="input" rows="1" placeholder="Scrivi all'agente" aria-label="Messaggio"></textarea>
+            <button type="submit" class="send" id="send" aria-label="Invia" disabled>
+              <svg class="icon i-send"><use href="#i-send"/></svg>
+              <svg class="icon i-stop"><use href="#i-stop"/></svg>
+            </button>
+          </form>
+          <p class="disclaimer">Stesso agente e stesse sessioni della CLI. Può sbagliare: verifica le fonti.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div class="scrim" id="scrim"></div>
+  <div class="menu context-menu" id="rowMenu" role="menu" hidden></div>
+  <dialog class="dialog" id="dialog" aria-labelledby="dialogTitle">
+    <form method="dialog">
+      <h2 id="dialogTitle"></h2>
+      <p id="dialogText"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="dialogCancel">Annulla</button>
+        <button type="button" class="btn btn-danger" id="dialogOk">Elimina</button>
+      </div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

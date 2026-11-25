@@ -1,0 +1,80 @@
+/* Tokens de design: tema claro (padrão) e escuro. Nenhuma view usa cor literal: só estas variáveis. */
+:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --panel-2: #f0f3f6;
+  --panel-3: #e8ecf1;
+  --border: #dfe4ea;
+  --border-strong: #c9d1da;
+  --text: #17202c;
+  --text-2: #3f4b5b;
+  --muted: #6b7788;
+  --faint: #98a3b2;
+  --accent: #0d9488;
+  --accent-strong: #0b7a70;
+  --accent-soft: #d9f2ee;
+  --accent-text: #ffffff;
+  --ok: #15803d;      --ok-soft: #dcf5e4;
+  --err: #c81e1e;     --err-soft: #fde4e4;
+  --warn: #b45309;    --warn-soft: #fdefd3;
+  --info: #1d4ed8;    --info-soft: #dfe9fd;
+  --purple: #6d28d9;  --purple-soft: #ece4fb;
+  --pink: #be185d;    --pink-soft: #fbe3ee;
+  --sel: #e3f4f1;
+  --hover: #f1f4f7;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+  --shadow-lg: 0 10px 30px rgba(16, 24, 40, .18);
+  /* tipos de span (trace) */
+  --k-llm: #6d28d9;
+  --k-tool: #0284c7;
+  --k-chain: #64748b;
+  --k-subagent: #d97706;
+  --k-skill: #be185d;
+  --k-file: #0d9488;
+  --k-todos: #4f46e5;
+  --k-code: #475569;
+  /* séries de gráficos (categóricas, legíveis nos dois temas) */
+  --c1: #0d9488; --c2: #6d28d9; --c3: #d97706; --c4: #0284c7; --c5: #be185d; --c6: #65a30d; --c7: #dc2626; --c8: #4f46e5;
+  --radius: 8px;
+  --radius-sm: 5px;
+  --font-ui: Inter, "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+  --sidebar-w: 212px;
+  --topbar-h: 52px;
+}
+
+[data-theme="dark"] {
+  --bg: #0e1319;
+  --panel: #151b23;
+  --panel-2: #1b222c;
+  --panel-3: #232b37;
+  --border: #27303c;
+  --border-strong: #35404e;
+  --text: #e6ebf1;
+  --text-2: #b9c3cf;
+  --muted: #8794a5;
+  --faint: #5f6b7a;
+  --accent: #2dd4bf;
+  --accent-strong: #5eead4;
+  --accent-soft: #11332f;
+  --accent-text: #04211d;
+  --ok: #4ade80;      --ok-soft: #12301d;
+  --err: #f87171;     --err-soft: #3a1717;
+  --warn: #fbbf24;    --warn-soft: #3a2a0c;
+  --info: #7aa7ff;    --info-soft: #14264d;
+  --purple: #b79cff;  --purple-soft: #2a1d4d;
+  --pink: #f48fb8;    --pink-soft: #43182f;
+  --sel: #14302d;
+  --hover: #1a222c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, .55);
+  --k-llm: #b79cff;
+  --k-tool: #38bdf8;
+  --k-chain: #94a3b8;
+  --k-subagent: #fbbf24;
+  --k-skill: #f48fb8;
+  --k-file: #2dd4bf;
+  --k-todos: #a5b4fc;
+  --k-code: #cbd5e1;
+  --c1: #2dd4bf; --c2: #b79cff; --c3: #fbbf24; --c4: #38bdf8; --c5: #f48fb8; --c6: #a3e635; --c7: #f87171; --c8: #a5b4fc;
+}
